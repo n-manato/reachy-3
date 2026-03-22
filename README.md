@@ -1,0 +1,1 @@
+cd /Users/56016401/Library/CloudStorage/OneDrive-UniversityofNebraska/Documents/Projects/Reachy/ethics-podcast && GI_TYPELIB_PATH=/opt/homebrew/lib/girepository-1.0 DYLD_LIBRARY_PATH=/opt/homebrew/lib GST_PLUGIN_PATH=/opt/homebrew/lib/gstreamer-1.0 uv run ethics-podcast 2>&1

@@ -1,0 +1,39 @@
+[project]
+name = "ethics-podcast"
+version = "0.1.0"
+description = "Ethics Podcast: Two Reachy Mini robots have an autonomous conversation about ethics"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "reachy-mini>=1.5.1",
+    "reachy-mini-dances-library",
+    "openai>=2.28.0",
+    "numpy",
+    "scipy",
+    "python-dotenv",
+    "pycairo",
+    "pygobject",
+    "SpeechRecognition>=3.10",
+]
+
+[project.scripts]
+ethics-podcast = "ethics_podcast.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ethics_podcast"]
+
+[tool.uv]
+environments = ["sys_platform == 'darwin' and platform_machine == 'arm64'"]
+
+# reachy-mini bundles gstreamer for Windows/Linux but gstreamer-msvc-runtime
+# has no macOS wheels. Override to skip it on macOS (audio still works via
+# the robot's daemon over the network).
+override-dependencies = [
+    "gstreamer-bundle ; sys_platform == 'win32'",
+    "gstreamer-libs ; sys_platform == 'win32'",
+    "gstreamer-msvc-runtime ; sys_platform == 'win32'",
+]
