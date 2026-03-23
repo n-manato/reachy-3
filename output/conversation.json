@@ -21,7 +21,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "left"
+            "direction": "up left"
           },
           "at_secs": 0.0
         }
@@ -44,7 +44,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "down"
+            "direction": "up right"
           },
           "at_secs": 0.0
         }
@@ -67,7 +67,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up"
+            "direction": "up left"
           },
           "at_secs": 0.0
         }
@@ -90,7 +90,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "down"
+            "direction": "up right"
           },
           "at_secs": 0.0
         }
@@ -113,7 +113,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up"
+            "direction": "up left"
           },
           "at_secs": 0.0
         }
@@ -136,7 +136,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up"
+            "direction": "up right"
           },
           "at_secs": 0.0
         }

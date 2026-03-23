@@ -35,7 +35,7 @@ from ethics_podcast.prompts import (
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path("output")
+BASE_OUTPUT_DIR = Path("output")
 OPENAI_SAMPLE_RATE = 24000
 
 
@@ -102,21 +102,21 @@ async def _collect_audio_response(conn: Any, label: str) -> tuple[str, bytes]:
     return "".join(transcript_parts).strip() or "[no response]", b"".join(audio_chunks)
 
 
-async def _generate_audio(config: Config, total_turns: int) -> list[dict]:
+async def _generate_audio(config: Config, total_turns: int, session_name: str = "ai_collaboration", output_dir: Path = BASE_OUTPUT_DIR) -> list[dict]:
     """Generate all turns as audio + transcript. No tools = reliable."""
     client = AsyncOpenAI(api_key=config.openai_api_key)
     turns: list[dict] = []
 
     async with client.realtime.connect(model=config.openai_model) as conn_a:
         async with client.realtime.connect(model=config.openai_model) as conn_b:
-            await _configure(conn_a, student_prompt(total_turns), config.robot_a.voice)
-            await _configure(conn_b, professor_prompt(total_turns), config.robot_b.voice)
+            await _configure(conn_a, student_prompt(total_turns, session_name), config.robot_a.voice)
+            await _configure(conn_b, professor_prompt(total_turns, session_name), config.robot_b.voice)
             logger.info("Both sessions configured.")
 
             # Turn 1
-            await _inject(conn_a, opening_seed(total_turns))
+            await _inject(conn_a, opening_seed(total_turns, session_name))
             transcript_a, audio_a = await _collect_audio_response(conn_a, "Student")
-            _save_turn(turns, 1, "student", transcript_a, audio_a)
+            _save_turn(turns, 1, "student", transcript_a, audio_a, output_dir)
 
             turn = 1
             while turn < total_turns:
@@ -126,7 +126,7 @@ async def _generate_audio(config: Config, total_turns: int) -> list[dict]:
                     msg_b += "\n\n[SYSTEM: " + closing_nudge_professor(total_turns) + "]"
                 await _inject(conn_b, msg_b)
                 transcript_b, audio_b = await _collect_audio_response(conn_b, "Professor")
-                _save_turn(turns, turn, "professor", transcript_b, audio_b)
+                _save_turn(turns, turn, "professor", transcript_b, audio_b, output_dir)
 
                 if turn >= total_turns:
                     break
@@ -137,7 +137,7 @@ async def _generate_audio(config: Config, total_turns: int) -> list[dict]:
                     msg_a += "\n\n[SYSTEM: " + closing_nudge_student(total_turns) + "]"
                 await _inject(conn_a, msg_a)
                 transcript_a, audio_a = await _collect_audio_response(conn_a, "Student")
-                _save_turn(turns, turn, "student", transcript_a, audio_a)
+                _save_turn(turns, turn, "student", transcript_a, audio_a, output_dir)
 
     return turns
 
@@ -167,6 +167,10 @@ Available head directions:
 - left: considering alternatives, confused
 - right: presenting another view, curious
 - front: neutral, direct
+- up left: excited and looking aside
+- up right: curious realization
+- down left: shy or uncertain
+- down right: pondering deeply
 
 For each turn, respond with a JSON array. Each entry:
 {"turn": N, "emotion": "emotion_name", "head": "direction"}
@@ -247,16 +251,22 @@ async def _assign_emotions(config: Config, turns: list[dict]) -> list[dict]:
 
 # ── Main entry point ───────────────────────────────────────────────────────
 
-async def run_generate(config: Config, num_exchanges: int = 5) -> None:
+async def run_generate(config: Config, num_exchanges: int = 5, session_name: str = "ai_collaboration") -> None:
     """Generate a conversation in two steps: audio first, then emotions."""
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR = BASE_OUTPUT_DIR / session_name
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     total_turns = num_exchanges * 2
 
     logger.info("Generating %d exchanges (%d total speaking turns)...", num_exchanges, total_turns)
 
+    from ethics_podcast.prompts import get_session
+    session = get_session(session_name)
+    logger.info("Session: %s — %s", session_name, session["title"])
+
     # Step A: Generate audio (reliable, no tool calls)
-    print("\n  Step 1/2: Generating audio...")
-    turns = await _generate_audio(config, total_turns)
+    print(f"\n  Session: {session['title']}")
+    print("  Step 1/2: Generating audio...")
+    turns = await _generate_audio(config, total_turns, session_name, OUTPUT_DIR)
 
     if not turns:
         print("  Generation failed — no turns produced.")
@@ -268,6 +278,8 @@ async def run_generate(config: Config, num_exchanges: int = 5) -> None:
 
     # Save
     meta = {
+        "session": session_name,
+        "title": session["title"],
         "model": config.openai_model,
         "student_voice": config.robot_a.voice,
         "professor_voice": config.robot_b.voice,
@@ -290,9 +302,9 @@ async def run_generate(config: Config, num_exchanges: int = 5) -> None:
         print(f"  Turn {t['turn']:2d} [{role:9s}]: {text}...  [{action_names}]")
 
 
-def _save_turn(turns: list, turn_num: int, role: str, transcript: str, audio: bytes) -> None:
+def _save_turn(turns: list, turn_num: int, role: str, transcript: str, audio: bytes, output_dir: Path = BASE_OUTPUT_DIR) -> None:
     filename = f"turn_{turn_num:02d}_{role}.wav"
-    filepath = OUTPUT_DIR / filename
+    filepath = output_dir / filename
     _write_wav(filepath, audio)
     duration = len(audio) / 2 / OPENAI_SAMPLE_RATE
     turns.append({

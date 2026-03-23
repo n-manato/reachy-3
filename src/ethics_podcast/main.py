@@ -335,6 +335,43 @@ def _restart_and_wake(config: Config) -> None:
     print("\n  Done! Use option 2 to play.")
 
 
+def _pick_session(action: str = "use") -> str | None:
+    """Show session picker and return chosen session name, or None to cancel."""
+    from pathlib import Path
+    from ethics_podcast.prompts import SESSIONS, get_session_names
+
+    names = get_session_names()
+    generated = set()
+    for name in names:
+        if (Path("output") / name / "conversation.json").exists():
+            generated.add(name)
+
+    print(f"\n  Available sessions ({action}):")
+    for i, name in enumerate(names):
+        session = SESSIONS[name]
+        status = " [generated]" if name in generated else ""
+        print(f"    {i + 1}. {session['title']}{status}")
+        print(f"       {session['description']}")
+
+    if action == "play" and generated:
+        print(f"    a. Play ALL generated sessions in sequence")
+
+    pick = input(f"\n  Select session (1-{len(names)}" + (", or 'a' for all" if action == "play" and generated else "") + "): ").strip()
+
+    if action == "play" and pick.lower() == "a":
+        return "ALL"
+
+    try:
+        idx = int(pick) - 1
+        if 0 <= idx < len(names):
+            return names[idx]
+    except ValueError:
+        pass
+
+    print("  Invalid selection.")
+    return None
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -380,11 +417,15 @@ def main() -> None:
 
         elif choice == "1":
             from ethics_podcast.generator import run_generate
+            from ethics_podcast.prompts import SESSIONS, get_session_names
             try:
+                session_name = _pick_session("generate")
+                if session_name is None:
+                    continue
                 exchanges = input("How many exchanges? (each = student + professor turn) [5]: ").strip() or "5"
                 n = int(exchanges)
                 print(f"  → {n} exchanges = {n * 2} total speaking turns")
-                asyncio.run(run_generate(config, n))
+                asyncio.run(run_generate(config, n, session_name))
             except KeyboardInterrupt:
                 print("\nGeneration interrupted.")
             except Exception as e:
@@ -395,7 +436,28 @@ def main() -> None:
             _stop_wake_listener(wake_proc)  # free WebRTC before player connects
             wake_proc = None
             try:
-                asyncio.run(run_playback(config))
+                session_name = _pick_session("play")
+                if session_name is None:
+                    wake_proc = _start_wake_listener(config)
+                    continue
+                if session_name == "ALL":
+                    from pathlib import Path
+                    from ethics_podcast.prompts import get_session_names, SESSIONS
+                    played = 0
+                    for sn in get_session_names():
+                        if (Path("output") / sn / "conversation.json").exists():
+                            played += 1
+                            print(f"\n{'='*50}")
+                            print(f"  Session {played}: {SESSIONS[sn]['title']}")
+                            print(f"{'='*50}")
+                            asyncio.run(run_playback(config, sn))
+                            if played < len([s for s in get_session_names() if (Path("output") / s / "conversation.json").exists()]):
+                                print("\n  Pause between sessions (5s)...")
+                                time.sleep(5)
+                    if played == 0:
+                        print("  No generated sessions found. Generate some first.")
+                else:
+                    asyncio.run(run_playback(config, session_name))
             except KeyboardInterrupt:
                 print("\nPlayback stopped.")
             except Exception as e:

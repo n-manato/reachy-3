@@ -31,7 +31,7 @@ from ethics_podcast.robot_controller import RobotController, connect_robots
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path("output")
+BASE_OUTPUT_DIR = Path("output")
 
 # ── Speech sway parameters (from conversation app's SwayRollRT) ────────────
 
@@ -164,6 +164,10 @@ async def _replay_tool_calls(
                 "up": (0, 0, 0, 0, -30, 0),
                 "down": (0, 0, 0, 0, 30, 0),
                 "front": (0, 0, 0, 0, 0, 0),
+                "up left": (0, 0, 0, 0, -25, 30),
+                "up right": (0, 0, 0, 0, -25, -30),
+                "down left": (0, 0, 0, 0, 25, 30),
+                "down right": (0, 0, 0, 0, 25, -30),
             }
             robot.queue_goto(head_map.get(direction, (0, 0, 0, 0, 0, 0)), duration=0.8)
 
@@ -216,18 +220,25 @@ async def _play_turn(
 
 # ── Main playback ──────────────────────────────────────────────────────────
 
-async def run_playback(config: Config) -> None:
+async def run_playback(config: Config, session_name: str | None = None) -> None:
     """Connect to robots and play the saved conversation."""
-    meta_path = OUTPUT_DIR / "conversation.json"
+    if session_name:
+        output_dir = BASE_OUTPUT_DIR / session_name
+    else:
+        output_dir = BASE_OUTPUT_DIR
+
+    meta_path = output_dir / "conversation.json"
     if not meta_path.exists():
-        print("No conversation found. Run 'Generate' first.")
+        print(f"No conversation found in {output_dir}/. Run 'Generate' first.")
         return
 
     with open(meta_path) as f:
         meta = json.load(f)
 
     turns = meta["turns"]
-    print(f"\nLoaded {len(turns)} turns. Connecting to robots...")
+    title = meta.get("title", session_name or "Ethics Podcast")
+    print(f"\nSession: {title}")
+    print(f"Loaded {len(turns)} turns. Connecting to robots...")
 
     robot_a, robot_b = await connect_robots(config.robot_a, config.robot_b)
 
@@ -245,7 +256,7 @@ async def run_playback(config: Config) -> None:
         for turn in turns:
             role = turn["role"]
             transcript = turn["transcript"]
-            audio_file = OUTPUT_DIR / turn["audio_file"]
+            audio_file = output_dir / turn["audio_file"]
             duration = turn["duration_secs"]
             tool_calls = turn.get("tool_calls", [])
 
