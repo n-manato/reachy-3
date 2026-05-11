@@ -31,7 +31,7 @@ from ethics_podcast.robot_controller import RobotController, connect_robots
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path("output")
+BASE_OUTPUT_DIR = Path("output")
 
 # ── Speech sway parameters (from conversation app's SwayRollRT) ────────────
 
@@ -69,11 +69,18 @@ def _loudness_01(db: float) -> float:
 
 # ── Playback tasks ─────────────────────────────────────────────────────────
 
-async def _stream_audio(robot: RobotController, pcm: np.ndarray, sample_rate: int) -> None:
-    """Send audio to the robot in chunks."""
-    chunk_size = sample_rate  # 1-second chunks
-    for i in range(0, len(pcm), chunk_size):
-        robot.push_audio(pcm[i : i + chunk_size], source_rate=sample_rate)
+async def _stream_audio(
+    robot: RobotController | None, pcm: np.ndarray, sample_rate: int, laptop: bool = False,
+) -> None:
+    """Send audio to the robot or play on laptop speaker."""
+    if laptop:
+        import sounddevice as sd
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: sd.play(pcm, samplerate=sample_rate, blocking=True))
+    else:
+        chunk_size = sample_rate  # 1-second chunks
+        for i in range(0, len(pcm), chunk_size):
+            robot.push_audio(pcm[i : i + chunk_size], source_rate=sample_rate)
 
 
 async def _drive_speech_sway(
@@ -164,6 +171,10 @@ async def _replay_tool_calls(
                 "up": (0, 0, 0, 0, -30, 0),
                 "down": (0, 0, 0, 0, 30, 0),
                 "front": (0, 0, 0, 0, 0, 0),
+                "up left": (0, 0, 0, 0, -25, 30),
+                "up right": (0, 0, 0, 0, -25, -30),
+                "down left": (0, 0, 0, 0, 25, 30),
+                "down right": (0, 0, 0, 0, 25, -30),
             }
             robot.queue_goto(head_map.get(direction, (0, 0, 0, 0, 0, 0)), duration=0.8)
 
@@ -181,6 +192,7 @@ async def _play_turn(
     tool_calls: list[dict],
     speaker_phases: tuple[float, ...],
     listener_look_yaw: float,
+    laptop_audio: bool = False,
 ) -> None:
     """Play one turn: audio + speech sway + tool call replay, all in parallel."""
     if not audio_path.exists():
@@ -201,7 +213,7 @@ async def _play_turn(
 
     # Run everything in parallel
     await asyncio.gather(
-        _stream_audio(speaker, pcm_float32, sample_rate),
+        _stream_audio(speaker, pcm_float32, sample_rate, laptop=laptop_audio),
         _drive_speech_sway(speaker, pcm_float32, sample_rate, duration, speaker_phases, stop),
         _replay_tool_calls(speaker, tool_calls, stop),
         asyncio.sleep(duration + 0.5),  # master timer
@@ -216,18 +228,25 @@ async def _play_turn(
 
 # ── Main playback ──────────────────────────────────────────────────────────
 
-async def run_playback(config: Config) -> None:
+async def run_playback(config: Config, session_name: str | None = None, laptop_audio: bool = False) -> None:
     """Connect to robots and play the saved conversation."""
-    meta_path = OUTPUT_DIR / "conversation.json"
+    if session_name:
+        output_dir = BASE_OUTPUT_DIR / session_name
+    else:
+        output_dir = BASE_OUTPUT_DIR
+
+    meta_path = output_dir / "conversation.json"
     if not meta_path.exists():
-        print("No conversation found. Run 'Generate' first.")
+        print(f"No conversation found in {output_dir}/. Run 'Generate' first.")
         return
 
     with open(meta_path) as f:
         meta = json.load(f)
 
     turns = meta["turns"]
-    print(f"\nLoaded {len(turns)} turns. Connecting to robots...")
+    title = meta.get("title", session_name or "Ethics Podcast")
+    print(f"\nSession: {title}")
+    print(f"Loaded {len(turns)} turns. Connecting to robots...")
 
     robot_a, robot_b = await connect_robots(config.robot_a, config.robot_b)
 
@@ -245,7 +264,7 @@ async def run_playback(config: Config) -> None:
         for turn in turns:
             role = turn["role"]
             transcript = turn["transcript"]
-            audio_file = OUTPUT_DIR / turn["audio_file"]
+            audio_file = output_dir / turn["audio_file"]
             duration = turn["duration_secs"]
             tool_calls = turn.get("tool_calls", [])
 
@@ -265,6 +284,7 @@ async def run_playback(config: Config) -> None:
             await _play_turn(
                 speaker, listener, audio_file, duration,
                 tool_calls, sp_phases, li_look_yaw,
+                laptop_audio=laptop_audio,
             )
 
             await asyncio.sleep(config.inter_turn_pause)
