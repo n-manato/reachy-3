@@ -69,11 +69,18 @@ def _loudness_01(db: float) -> float:
 
 # ── Playback tasks ─────────────────────────────────────────────────────────
 
-async def _stream_audio(robot: RobotController, pcm: np.ndarray, sample_rate: int) -> None:
-    """Send audio to the robot in chunks."""
-    chunk_size = sample_rate  # 1-second chunks
-    for i in range(0, len(pcm), chunk_size):
-        robot.push_audio(pcm[i : i + chunk_size], source_rate=sample_rate)
+async def _stream_audio(
+    robot: RobotController | None, pcm: np.ndarray, sample_rate: int, laptop: bool = False,
+) -> None:
+    """Send audio to the robot or play on laptop speaker."""
+    if laptop:
+        import sounddevice as sd
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: sd.play(pcm, samplerate=sample_rate, blocking=True))
+    else:
+        chunk_size = sample_rate  # 1-second chunks
+        for i in range(0, len(pcm), chunk_size):
+            robot.push_audio(pcm[i : i + chunk_size], source_rate=sample_rate)
 
 
 async def _drive_speech_sway(
@@ -185,6 +192,7 @@ async def _play_turn(
     tool_calls: list[dict],
     speaker_phases: tuple[float, ...],
     listener_look_yaw: float,
+    laptop_audio: bool = False,
 ) -> None:
     """Play one turn: audio + speech sway + tool call replay, all in parallel."""
     if not audio_path.exists():
@@ -205,7 +213,7 @@ async def _play_turn(
 
     # Run everything in parallel
     await asyncio.gather(
-        _stream_audio(speaker, pcm_float32, sample_rate),
+        _stream_audio(speaker, pcm_float32, sample_rate, laptop=laptop_audio),
         _drive_speech_sway(speaker, pcm_float32, sample_rate, duration, speaker_phases, stop),
         _replay_tool_calls(speaker, tool_calls, stop),
         asyncio.sleep(duration + 0.5),  # master timer
@@ -220,7 +228,7 @@ async def _play_turn(
 
 # ── Main playback ──────────────────────────────────────────────────────────
 
-async def run_playback(config: Config, session_name: str | None = None) -> None:
+async def run_playback(config: Config, session_name: str | None = None, laptop_audio: bool = False) -> None:
     """Connect to robots and play the saved conversation."""
     if session_name:
         output_dir = BASE_OUTPUT_DIR / session_name
@@ -276,6 +284,7 @@ async def run_playback(config: Config, session_name: str | None = None) -> None:
             await _play_turn(
                 speaker, listener, audio_file, duration,
                 tool_calls, sp_phases, li_look_yaw,
+                laptop_audio=laptop_audio,
             )
 
             await asyncio.sleep(config.inter_turn_pause)

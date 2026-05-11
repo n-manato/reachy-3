@@ -440,6 +440,12 @@ def main() -> None:
                 if session_name is None:
                     wake_proc = _start_wake_listener(config)
                     continue
+
+                audio_choice = input("  Audio output — (1) Robot speakers  (2) Laptop speaker [1]: ").strip()
+                laptop_audio = audio_choice == "2"
+                if laptop_audio:
+                    print("  → Audio on laptop. Emotions & movements still go to robots.")
+
                 if session_name == "ALL":
                     from pathlib import Path
                     from ethics_podcast.prompts import get_session_names, SESSIONS
@@ -450,14 +456,14 @@ def main() -> None:
                             print(f"\n{'='*50}")
                             print(f"  Session {played}: {SESSIONS[sn]['title']}")
                             print(f"{'='*50}")
-                            asyncio.run(run_playback(config, sn))
+                            asyncio.run(run_playback(config, sn, laptop_audio=laptop_audio))
                             if played < len([s for s in get_session_names() if (Path("output") / s / "conversation.json").exists()]):
                                 print("\n  Pause between sessions (5s)...")
                                 time.sleep(5)
                     if played == 0:
                         print("  No generated sessions found. Generate some first.")
                 else:
-                    asyncio.run(run_playback(config, session_name))
+                    asyncio.run(run_playback(config, session_name, laptop_audio=laptop_audio))
             except KeyboardInterrupt:
                 print("\nPlayback stopped.")
             except Exception as e:
