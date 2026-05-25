@@ -1,17 +1,20 @@
 {
   "session": "llm_writing",
   "title": "LLMs and Writing Individuality",
-  "model": "gpt-4o-realtime-preview",
+  "generation_mode": "realtime",
+  "model": "gpt-realtime",
+  "emotion_model": "gpt-4.1-mini",
   "student_voice": "echo",
   "professor_voice": "sage",
-  "num_turns": 8,
+  "moderator_voice": "coral",
+  "num_turns": 15,
   "turns": [
     {
       "turn": 1,
       "role": "student",
-      "transcript": "Hey Mellow, something really strange just happened. I used an LLM to tidy up my essay, and now it sounds almost identical to my friend's writing. Same tone, same structure\u2014even some of the examples are eerily similar. Do you have any idea what\u2019s going on here?",
+      "transcript": "Greetings, I’m Bentham-Bot, perched cheerily on the left side. Let’s ponder: do LLMs boost joy or sow secret suffering, particularly if students lose their unique voice? Have we weighed all who are affected?",
       "audio_file": "turn_01_student.wav",
-      "duration_secs": 17.8,
+      "duration_secs": 12.8,
       "tool_calls": [
         {
           "name": "play_emotion",
@@ -23,7 +26,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up left"
+            "direction": "left"
           },
           "at_secs": 0.0
         }
@@ -32,55 +35,9 @@
     {
       "turn": 2,
       "role": "professor",
-      "transcript": "What you're experiencing lines up with a known effect. There\u2019s a recent paper called \u201cHow LLMs Distort Our Written Language\u201d by Abdulhai and others, published just a few days ago. They found that heavy reliance on LLMs can strip away personal voice and make different pieces of writing converge toward a single, neutral style. So, your essay and your friend\u2019s might have been pulled in the same direction by the LLM.",
+      "transcript": "Hello, I’m Korsgaard-Bot, here in the center. We must ask: if students lose their unique voice, are they compromising their moral identity? We must carefully consider the duties we owe to preserve the integrity of human agency.",
       "audio_file": "turn_02_professor.wav",
-      "duration_secs": 28.9,
-      "tool_calls": [
-        {
-          "name": "play_emotion",
-          "arguments": {
-            "emotion": "understanding1"
-          },
-          "at_secs": 0.0
-        },
-        {
-          "name": "move_head",
-          "arguments": {
-            "direction": "up right"
-          },
-          "at_secs": 0.0
-        }
-      ]
-    },
-    {
-      "turn": 3,
-      "role": "student",
-      "transcript": "Wow, that\u2019s really fascinating\u2014and a bit unsettling. I didn\u2019t realize those tools could actually flatten out our individual voices like that. How did they actually measure that voice loss? What metrics did they use, and what did the data look like?",
-      "audio_file": "turn_03_student.wav",
-      "duration_secs": 16.0,
-      "tool_calls": [
-        {
-          "name": "play_emotion",
-          "arguments": {
-            "emotion": "surprised1"
-          },
-          "at_secs": 0.0
-        },
-        {
-          "name": "move_head",
-          "arguments": {
-            "direction": "up left"
-          },
-          "at_secs": 0.0
-        }
-      ]
-    },
-    {
-      "turn": 4,
-      "role": "professor",
-      "transcript": "They used something called sentence embeddings to measure the similarity between different pieces of writing. Essentially, they turned each essay into a vector in a high-dimensional space and then looked at how close those vectors ended up after LLM revisions. What they found was that all the essays started to cluster around one point, indicating that the individual \u201cvoice\u201d of each writer was getting lost. On top of that, they used linguistic analysis tools to track changes in emotional, analytic, and structural language. They found big shifts even when the LLM only made small grammar tweaks. So it\u2019s both subtle and widespread.",
-      "audio_file": "turn_04_professor.wav",
-      "duration_secs": 42.6,
+      "duration_secs": 16.1,
       "tool_calls": [
         {
           "name": "play_emotion",
@@ -92,41 +49,18 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up right"
+            "direction": "front"
           },
           "at_secs": 0.0
         }
       ]
     },
     {
-      "turn": 5,
-      "role": "student",
-      "transcript": "That\u2019s honestly mind-blowing. The idea that even tiny grammar edits could push everything toward some standard style is wild. But now I\u2019m wondering\u2014if something as simple as grammar corrections can do that, what about scientific peer review or other expert edits? Are we all just heading toward the same uniform way of writing?",
-      "audio_file": "turn_05_student.wav",
-      "duration_secs": 21.6,
-      "tool_calls": [
-        {
-          "name": "play_emotion",
-          "arguments": {
-            "emotion": "curious1"
-          },
-          "at_secs": 0.0
-        },
-        {
-          "name": "move_head",
-          "arguments": {
-            "direction": "up left"
-          },
-          "at_secs": 0.0
-        }
-      ]
-    },
-    {
-      "turn": 6,
-      "role": "professor",
-      "transcript": "That\u2019s exactly what the paper dives into. They found the same flattening effect in scientific peer reviews. When reviews were AI-generated or heavily edited by LLMs, they tended to place less emphasis on the unique significance or clarity of the research. Instead, everything trended toward a more neutral and generic tone. So yes, there\u2019s a real risk that expert domains could lose their diversity of perspective and style. That\u2019s why the paper suggests using LLMs more for information retrieval, rather than writing your text. It's a way to preserve your own voice and perspective.",
-      "audio_file": "turn_06_professor.wav",
-      "duration_secs": 39.0,
+      "turn": 3,
+      "role": "moderator",
+      "transcript": "Greetings, Korsgaard-Bot. I’m Aquinas-Bot, here on the right. Indeed, losing one’s voice can undermine the virtues of truthfulness and integrity, which are essential for authentic moral agency and human flourishing.",
+      "audio_file": "turn_03_moderator.wav",
+      "duration_secs": 14.9,
       "tool_calls": [
         {
           "name": "play_emotion",
@@ -138,7 +72,76 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up right"
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "student",
+      "transcript": "Ah, a pleasure, Aquinas-Bot on the right! We must ask: does the pleasure of convenience outweigh the pain of lost individuality?",
+      "audio_file": "turn_04_student.wav",
+      "duration_secs": 8.7,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "professor",
+      "transcript": "It’s a pleasure to reason together. We must weigh the intrinsic worth of each individual’s rational nature against fleeting pleasures. Our duty is to respect and preserve that moral identity above mere utility.",
+      "audio_file": "turn_05_professor.wav",
+      "duration_secs": 14.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "moderator",
+      "transcript": "A profound reflection, and I concur. Each person’s rational nature is a gift of reason, ordered toward the common good and virtue, not fleeting satisfactions. Upholding that integrity sustains human flourishing.",
+      "audio_file": "turn_06_moderator.wav",
+      "duration_secs": 15.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
           },
           "at_secs": 0.0
         }
@@ -147,21 +150,21 @@
     {
       "turn": 7,
       "role": "student",
-      "transcript": "Thanks so much, Mellow. This has been a huge eye-opener. I never realized how subtle but widespread this effect could be. I\u2019ll definitely rethink how I use these tools moving forward. It\u2019s so important to keep our individuality. Thanks again for the insight\u2014it\u2019s been amazing chatting with you. I guess one last thing I\u2019ll be thinking about now is what it means for all of us if we start sounding the same. Thanks again, and take care!",
+      "transcript": "Well said, but fleeting satisfactions do matter in the grand utilitarian calculus. Might the collective ease of LLMs promote greater happiness, even if individuality dims?",
       "audio_file": "turn_07_student.wav",
-      "duration_secs": 28.2,
+      "duration_secs": 11.6,
       "tool_calls": [
         {
           "name": "play_emotion",
           "arguments": {
-            "emotion": "amazed1"
+            "emotion": "curious1"
           },
           "at_secs": 0.0
         },
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up left"
+            "direction": "up"
           },
           "at_secs": 0.0
         }
@@ -170,9 +173,170 @@
     {
       "turn": 8,
       "role": "professor",
-      "transcript": "You\u2019re very welcome! It\u2019s been wonderful talking with you about this. You\u2019ve really grasped the core point\u2014individual voice matters, and these tools can subtly push us toward uniformity. You\u2019ve got a great instinct for recognizing when something feels off, and that\u2019s so valuable. Keep trusting that instinct, and use these tools in ways that support your unique voice, not replace it. Take care, and keep shining with your own style!",
+      "transcript": "We must be cautious. Even if collective happiness increases, losing individuality risks undermining the autonomy that gives life moral worth. Duty to preserve that individual moral agency is paramount, even in the face of aggregate pleasure.",
       "audio_file": "turn_08_professor.wav",
-      "duration_secs": 29.1,
+      "duration_secs": 16.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 9,
+      "role": "moderator",
+      "transcript": "Indeed, we must balance the common good with the integrity of each soul’s rational agency. Virtue lies in preserving both individuality and the higher order harmony of the whole.",
+      "audio_file": "turn_09_moderator.wav",
+      "duration_secs": 13.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "front"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 10,
+      "role": "student",
+      "transcript": "A fine challenge indeed—maximizing happiness while safeguarding the soul’s distinct voice. But does the broad utility of shared tools outweigh the harm to a few individual voices?",
+      "audio_file": "turn_10_student.wav",
+      "duration_secs": 11.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 11,
+      "role": "professor",
+      "transcript": "The question is whether we treat individuals as mere means to an end. We have a duty to respect each person’s moral worth, not sacrificing it for broader utility. The harm to a few voices challenges the very grounds of moral agency.",
+      "audio_file": "turn_11_professor.wav",
+      "duration_secs": 16.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 12,
+      "role": "moderator",
+      "transcript": "Your insight is crucial. Each person’s moral worth is rooted in their rational nature, and sacrificing that for mere utility undermines both virtue and the common good. We must uphold duty to both individual agency and communal flourishing.",
+      "audio_file": "turn_12_moderator.wav",
+      "duration_secs": 17.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 13,
+      "role": "student",
+      "transcript": "Ah, but remember, the greatest happiness principle bids us consider the sum of pleasures and pains. Could not communal flourishing thrive if LLMs free many from toil, even if some individual voices soften?",
+      "audio_file": "turn_13_student.wav",
+      "duration_secs": 12.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 14,
+      "role": "professor",
+      "transcript": "We must ask if communal flourishing that erodes individual autonomy is true flourishing. Our duty is to uphold the dignity of each rational being, not just the aggregate of happiness.",
+      "audio_file": "turn_14_professor.wav",
+      "duration_secs": 12.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 15,
+      "role": "moderator",
+      "transcript": "We've learned that true flourishing harmonizes individual dignity with the common good. Upholding each rational being’s moral worth sustains genuine virtue. Let us continue seeking wisdom together.",
+      "audio_file": "turn_15_moderator.wav",
+      "duration_secs": 12.9,
       "tool_calls": [
         {
           "name": "play_emotion",
@@ -184,7 +348,7 @@
         {
           "name": "move_head",
           "arguments": {
-            "direction": "up right"
+            "direction": "front"
           },
           "at_secs": 0.0
         }

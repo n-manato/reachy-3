@@ -191,7 +191,7 @@ def install_system_deps(dry: bool) -> None:
 def reconfigure_pyproject(marker: str, dry: bool) -> bool:
     """Set environments=[marker] in pyproject.toml. Returns True if changed."""
     step("Configuring pyproject.toml for this platform")
-    text = PYPROJECT.read_text()
+    text = PYPROJECT.read_text(encoding="utf-8")
     new_line = f'environments = ["{marker}"]'
 
     pattern = re.compile(r'^environments\s*=\s*\[[^\]]*\]', re.MULTILINE)
@@ -209,7 +209,7 @@ def reconfigure_pyproject(marker: str, dry: bool) -> bool:
         info(f"          to: {new_line}")
         return True
 
-    PYPROJECT.write_text(pattern.sub(new_line, text))
+    PYPROJECT.write_text(pattern.sub(new_line, text), encoding="utf-8")
     ok(f"Set environments = {marker}")
     return True
 

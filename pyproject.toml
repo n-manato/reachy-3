@@ -31,7 +31,7 @@ packages = ["src/ethics_podcast"]
 # Lock resolution is pinned to the platform where this lock was generated.
 # To run on a different OS, edit this list (or delete `uv.lock`) and run
 # `uv lock` on the target machine. See README for cross-platform setup.
-environments = ["sys_platform == 'darwin' and platform_machine == 'arm64'"]
+environments = ["sys_platform == 'win32'"]
 
 # reachy-mini bundles gstreamer-msvc-runtime for Windows but it has no
 # wheels for macOS/Linux. Override to scope it to Windows only — macOS

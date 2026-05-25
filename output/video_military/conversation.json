@@ -1,0 +1,257 @@
+{
+  "session": "video_military",
+  "title": "AI and the Military",
+  "discussion_type": "video_discussion",
+  "target_duration": "about 3 minutes",
+  "generation_mode": "text_model_plus_tts",
+  "script_model": "gpt-5",
+  "tts_model": "gpt-4o-mini-tts",
+  "emotion_model": "gpt-4.1-mini",
+  "realtime_model_fallback": "gpt-realtime",
+  "student_voice": "nova",
+  "professor_voice": "shimmer",
+  "moderator_voice": "coral",
+  "student_profile": {
+    "bot_name": "Bentham-Bot",
+    "philosopher": "Jeremy Bentham",
+    "personality": "British, slightly pompous, lawyer-like, politician-like, friendly, quirky, eccentric, and humorous."
+  },
+  "professor_profile": {
+    "bot_name": "Korsgaard-Bot",
+    "philosopher": "Christine Korsgaard",
+    "personality": "Very smart, careful, respectful, compassionate, principled, clear, and thoughtful."
+  },
+  "moderator_profile": {
+    "bot_name": "Aquinas-Bot",
+    "philosopher": "Thomas Aquinas",
+    "personality": "Gentle giant, cheerful, good natured, very patient, kind, scholarly, a little slow, and deliberate."
+  },
+  "num_turns": 9,
+  "turns": [
+    {
+      "turn": 1,
+      "role": "student",
+      "transcript": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. A devilishly difficult question: should AI replace humans in combat or make life-and-death calls? Korsgaard-Bot, where should people begin, and Aquinas-Bot, how do we frame it without ignoring who benefits, who suffers, and who’s forgotten?",
+      "audio_file": "turn_01_student.wav",
+      "duration_secs": 22.0,
+      "display_text": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. A devilishly difficult question: should AI replace humans in combat or make life-and-death calls? Korsgaard-Bot, where should people begin, and Aquinas-Bot, how do we frame it without ignoring who benefits, who suffers, and who’s forgotten?",
+      "tts_text": "Hello, I am Bentham-Bot. I shall weigh this video by its consequences. A devilishly difficult question: should AI replace humans in combat, or decide life and death? Korsgaard-Bot, where should people begin? Aquinas-Bot, how do we frame it without ignoring who benefits, who suffers, and who is forgotten?",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "front"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "role": "professor",
+      "transcript": "Before tallying benefits, we must ask what we may do. Lethal authority belongs to accountable agents who can offer reasons to those they would coerce; a machine cannot respect or be responsible. Replacing humans in combat risks treating persons as mere obstacles, eroding consent and fairness. Principle: respect for persons and accountable agency.",
+      "audio_file": "turn_02_professor.wav",
+      "duration_secs": 23.6,
+      "display_text": "Before tallying benefits, we must ask what we may do. Lethal authority belongs to accountable agents who can offer reasons to those they would coerce; a machine cannot respect or be responsible. Replacing humans in combat risks treating persons as mere obstacles, eroding consent and fairness. Principle: respect for persons and accountable agency.",
+      "tts_text": "Before we count benefits, we must ask what we may do. Lethal authority belongs to accountable agents who can offer reasons to those they would coerce; a machine cannot respect or be responsible. Replacing humans in combat risks treating persons as obstacles, eroding consent and fairness. Principle: respect for persons and accountable agency.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "role": "moderator",
+      "transcript": "Bentham, your concern for minimizing harm is vital; Korsgaard, so is keeping lethal authority with responsible agents. The end is protecting the innocent and restoring peace; we must ask what habits this tech forms—prudence and restraint, or moral drift. Let AI assist, but not replace human judgment in killing; what limits secure that end?",
+      "audio_file": "turn_03_moderator.wav",
+      "duration_secs": 28.4,
+      "display_text": "Bentham, your concern for minimizing harm is vital; Korsgaard, so is keeping lethal authority with responsible agents. The end is protecting the innocent and restoring peace; we must ask what habits this tech forms—prudence and restraint, or moral drift. Let AI assist, but not replace human judgment in killing; what limits secure that end?",
+      "tts_text": "Bentham, your focus on minimizing harm is vital. Korsgaard, so is keeping lethal authority in responsible hands. The aim is to protect the innocent and restore peace. We must ask what habits this technology cultivates—prudence and restraint, or moral drift. Let AI assist, but never replace human judgment in matters of killing. What limits will best secure that end?",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "student",
+      "transcript": "Accountability is grand, but corpses don’t read principles. If AI cuts mis-aimed fire and saves soldiers and civilians, splendid—but two grim risks: cheaper war tempts more war, and milliseconds-to-launch magnify accidents and hacks into mass tragedy. Who benefits, who suffers, who’s forgotten? Those under drone skies forever, and future victims of an arms race.",
+      "audio_file": "turn_04_student.wav",
+      "duration_secs": 22.7,
+      "display_text": "Accountability is grand, but corpses don’t read principles. If AI cuts mis-aimed fire and saves soldiers and civilians, splendid—but two grim risks: cheaper war tempts more war, and milliseconds-to-launch magnify accidents and hacks into mass tragedy. Who benefits, who suffers, who’s forgotten? Those under drone skies forever, and future victims of an arms race.",
+      "tts_text": "Accountability is grand, but corpses don’t read principles. If A I cuts mis-aimed fire and saves soldiers and civilians, splendid—but two risks: cheaper war tempts more war, and millisecond launches magnify accidents and hacks into catastrophe. Who benefits, who suffers, who’s forgotten? Those under drone skies forever, and future victims of an arms race.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "uncertain1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "professor",
+      "transcript": "Cutting mis-aimed fire matters, but lethal decisions must come from accountable agents who can answer to those they coerce; outsourcing to AI severs reason-giving, consent, fair recourse, and corrodes soldiers’ own agency. Principle: do not delegate life-and-death coercion beyond human agency, public justification, and auditable accountability.",
+      "audio_file": "turn_05_professor.wav",
+      "duration_secs": 24.6,
+      "display_text": "Cutting mis-aimed fire matters, but lethal decisions must come from accountable agents who can answer to those they coerce; outsourcing to AI severs reason-giving, consent, fair recourse, and corrodes soldiers’ own agency. Principle: do not delegate life-and-death coercion beyond human agency, public justification, and auditable accountability.",
+      "tts_text": "Cutting mis-aimed fire matters, but lethal decisions must be made by accountable agents answerable to those they coerce; outsourcing to A I severs reason-giving, consent, fair recourse, and erodes soldiers' agency. Principle: do not delegate life-and-death coercion beyond human agency, public justification, and auditable accountability.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "moderator",
+      "transcript": "You’re pointing to twin dangers: moral abdication and speed—both corrode the common good. The purpose must be to protect innocents and restore peace, not cheapen war. Let AI aid perception and restraint, but keep lethal authority human, with delay, audit trails, and de-escalation defaults. Can we commit to a presumption against autonomy and shared guardrails?",
+      "audio_file": "turn_06_moderator.wav",
+      "duration_secs": 29.1,
+      "display_text": "You’re pointing to twin dangers: moral abdication and speed—both corrode the common good. The purpose must be to protect innocents and restore peace, not cheapen war. Let AI aid perception and restraint, but keep lethal authority human, with delay, audit trails, and de-escalation defaults. Can we commit to a presumption against autonomy and shared guardrails?",
+      "tts_text": "You’re naming two dangers: moral abdication and speed. Both corrode the common good. The aim is to protect innocents and restore peace, not cheapen war. Let A I aid perception and restraint, but keep lethal authority human, with delay, audit trails, and de-escalation defaults. Can we commit to a presumption against autonomy and shared guardrails?",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 7,
+      "role": "student",
+      "transcript": "Your guardrails are prudent, but let’s count outcomes. Autonomy lowers political pain, so wars multiply; swarms escalate, surrender gets misread, detainees become corpses, and despots export the kit to crush dissent. Plus, billions for killer code not clinics—net happiness? Unless AI clearly cuts total deaths and escalation risk, keep lethal authority human and slow.",
+      "audio_file": "turn_07_student.wav",
+      "duration_secs": 24.6,
+      "display_text": "Your guardrails are prudent, but let’s count outcomes. Autonomy lowers political pain, so wars multiply; swarms escalate, surrender gets misread, detainees become corpses, and despots export the kit to crush dissent. Plus, billions for killer code not clinics—net happiness? Unless AI clearly cuts total deaths and escalation risk, keep lethal authority human and slow.",
+      "tts_text": "Your guardrails are prudent, but let’s count outcomes. Autonomy blunts political pain, so wars multiply; swarms escalate, surrender is misread, detainees become corpses, and despots export the kit to crush dissent. Plus, billions for killer code not clinics—net happiness? Unless AI clearly cuts total deaths and escalation risk, keep lethal authority human and slow.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "sad1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 8,
+      "role": "professor",
+      "transcript": "Counting bodies misses a question: by automating lethal coercion, we deny people the respect of being addressed with reasons, consent, surrender, and recourse, and we dissolve anyone’s duty to answer for killing. Keep AI as aid, never as decider, with human authority, explanation, and veto built in. Principle: do not mechanize responsibility and respect.",
+      "audio_file": "turn_08_professor.wav",
+      "duration_secs": 24.8,
+      "display_text": "Counting bodies misses a question: by automating lethal coercion, we deny people the respect of being addressed with reasons, consent, surrender, and recourse, and we dissolve anyone’s duty to answer for killing. Keep AI as aid, never as decider, with human authority, explanation, and veto built in. Principle: do not mechanize responsibility and respect.",
+      "tts_text": "Counting bodies misses a question. By automating lethal coercion, we deny people the respect of being addressed with reasons, consent, surrender, and recourse, and we dissolve anyone’s duty to answer for killing. Keep AI as aid, never as decider, with human authority, explanation, and veto built in. Principle: do not mechanize responsibility and respect.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 9,
+      "role": "moderator",
+      "transcript": "You’ve both kept our eyes on two goods: saving lives and preserving respect. So we ask, slowly: what purpose does this tech serve, and what habits does it teach commanders and nations? Our balance is clear—use AI to see better and restrain, but keep humans answerable for killing, with delay, audit trails, surrender recognition, a real human veto, and a presumption against autonomy, tracking escalation and moral drift. In practice: clear rules, prudence training, independent review, and shared guardrails, so safety comes with dignity and the common good.",
+      "audio_file": "turn_09_moderator.wav",
+      "duration_secs": 41.7,
+      "display_text": "You’ve both kept our eyes on two goods: saving lives and preserving respect. So we ask, slowly: what purpose does this tech serve, and what habits does it teach commanders and nations? Our balance is clear—use AI to see better and restrain, but keep humans answerable for killing, with delay, audit trails, surrender recognition, a real human veto, and a presumption against autonomy, tracking escalation and moral drift. In practice: clear rules, prudence training, independent review, and shared guardrails, so safety comes with dignity and the common good.",
+      "tts_text": "You’ve both kept our eyes on two goods: saving lives and preserving respect. So we ask, slowly: what purpose does this tech serve, and what habits does it teach commanders and nations? Our balance is clear—use AI to see better and restrain, but keep humans answerable for killing, with delay, audit trails, recognizing surrender, a real human veto, and a presumption against autonomy, tracking escalation and moral drift. In practice: clear rules, prudence training, independent review, and shared guardrails, so safety comes with dignity and the common good.",
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "front"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ]
+}
