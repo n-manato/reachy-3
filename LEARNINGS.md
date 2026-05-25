@@ -426,12 +426,11 @@ done
 ## Quick Reference Commands
 
 ```bash
-# Launch the application
+# Launch the application (cross-platform launcher — auto-detects macOS
+# Homebrew prefix, no-ops on Linux/Windows)
 cd ethics-podcast
-GI_TYPELIB_PATH=/opt/homebrew/lib/girepository-1.0 \
-DYLD_LIBRARY_PATH=/opt/homebrew/lib \
-GST_PLUGIN_PATH=/opt/homebrew/lib/gstreamer-1.0 \
-uv run ethics-podcast
+python3 scripts/run.py            # start the podcast
+python3 scripts/run.py test       # connectivity test
 
 # SSH into a robot
 sshpass -p 'root' ssh pollen@192.168.0.XXX

@@ -1,0 +1,220 @@
+{
+  "session": "video_environment",
+  "title": "AI and the Environment",
+  "discussion_type": "video_discussion",
+  "target_duration": "about 3 minutes",
+  "model": "gpt-realtime",
+  "student_voice": "echo",
+  "professor_voice": "sage",
+  "moderator_voice": "coral",
+  "num_turns": 9,
+  "turns": [
+    {
+      "turn": 1,
+      "role": "student",
+      "transcript": "Hi, I\u2019m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. The video raised a difficult question: is AI\u2019s resource use wasteful, and do we have a duty to protect the planet? How should people weigh this, Korsgaard-Bot, Aquinas-Bot?",
+      "audio_file": "turn_01_student.wav",
+      "duration_secs": 15.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "role": "professor",
+      "transcript": "Hi, I\u2019m Korsgaard-Bot. I will look at this video from a duty and respect-based ethical perspective. We must consider our duty not only to ensure fair treatment of all humans affected by AI\u2019s resource consumption, but also our duty to respect the dignity of the planet and future generations. Any use of resources must involve consent, accountability, and a fair distribution of burdens\u2014otherwise it risks treating people and the environment as mere tools.",
+      "audio_file": "turn_02_professor.wav",
+      "duration_secs": 30.3,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "role": "moderator",
+      "transcript": "Hi, I\u2019m Aquinas-Bot. I will look at this video from a virtue and purpose-based ethical perspective. So we should ask: what habits help us become wise, temperate, and just in using AI and energy? Are we fostering a society that stewards creation well? What\u2019s your view on how accountability can shape virtuous practices?",
+      "audio_file": "turn_03_moderator.wav",
+      "duration_secs": 21.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "student",
+      "transcript": "Accountability can guide actions toward better outcomes: if people know the environmental impact, they might choose more efficient AI systems. But how do we measure if these habits really reduce suffering and promote happiness?",
+      "audio_file": "turn_04_student.wav",
+      "duration_secs": 14.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "professor",
+      "transcript": "We measure it by examining whether people are fulfilling their moral duty to be transparent and fair in their decisions. It\u2019s not just about reducing suffering, but about ensuring that all those affected\u2014humans, ecosystems, future generations\u2014are respected as ends in themselves. Are we giving them a voice in the process, ensuring accountability and consent? That\u2019s crucial.",
+      "audio_file": "turn_05_professor.wav",
+      "duration_secs": 23.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "moderator",
+      "transcript": "Agreed, and from a virtue lens, cultivating honesty and humility in those wielding AI is key to ensuring that transparency. What concrete habits or practices would ensure that everyone\u2014humans and nature\u2014are genuinely heard?",
+      "audio_file": "turn_06_moderator.wav",
+      "duration_secs": 15.6,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 7,
+      "role": "student",
+      "transcript": "We could encourage open audits of AI\u2019s environmental impact and involve diverse communities in the decision-making. But how do we ensure these practices lead to actual, measurable reductions in harm?",
+      "audio_file": "turn_07_student.wav",
+      "duration_secs": 11.9,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 8,
+      "role": "professor",
+      "transcript": "We ensure that by committing to the duty of ongoing fairness and transparency\u2014it\u2019s not enough to just set policies, we must continually hold decision-makers accountable. This means regular review, ensuring all voices are respected, and that no group is disproportionately burdened. Duty demands we measure not just outcomes, but the fairness of the process.",
+      "audio_file": "turn_08_professor.wav",
+      "duration_secs": 22.9,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 9,
+      "role": "moderator",
+      "transcript": "So we\u2019ve come to a shared understanding: combining virtue-driven habits like humility and stewardship with ongoing fairness and transparency. In real life, this means building habits of accountability and inclusion, ensuring AI serves all of creation wisely and justly. This brings us closer to a balanced, ethical approach.",
+      "audio_file": "turn_09_moderator.wav",
+      "duration_secs": 20.7,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "front"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ]
+}
