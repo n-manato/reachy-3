@@ -8,13 +8,14 @@ Robots:
   - Fellow = moderator = Aquinas-Bot
 
 Normal podcast mode:
-  Uses OpenAI Realtime API, same as before.
+  Uses OpenAI Realtime API in text-only mode for the script, then synthesizes
+  each turn via ElevenLabs (per-persona voice + tuning).
 
 Video discussion mode:
   Uses a stronger split pipeline:
     Step A: Generate each turn as text with SCRIPT_MODEL.
     Step B: Polish the text for TTS with SCRIPT_MODEL.
-    Step C: Generate audio with TTS_MODEL.
+    Step C: Generate audio via ElevenLabs (model from config.elevenlabs_model).
     Step D: Assign emotions/actions.
 
 Output:
@@ -25,7 +26,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import inspect
 import json
 import logging
 import math
@@ -45,6 +45,11 @@ except Exception:
 from openai import AsyncOpenAI
 
 from ethics_podcast.config import Config
+from ethics_podcast.elevenlabs_tts import (
+    ELEVENLABS_SAMPLE_RATE,
+    settings_for,
+    synthesize_pcm,
+)
 from ethics_podcast.prompts import (
     student_prompt,
     professor_prompt,
@@ -54,6 +59,17 @@ from ethics_podcast.prompts import (
     closing_nudge_professor,
 )
 
+
+def _voice_id_for_role(config: Config, role: str) -> str:
+    """Map a robot role to its ElevenLabs voice_id from config."""
+    if role == "student":
+        return config.robot_a.voice
+    if role == "professor":
+        return config.robot_b.voice
+    if role == "moderator":
+        return config.robot_c.voice
+    return config.robot_b.voice
+
 logger = logging.getLogger(__name__)
 
 BASE_OUTPUT_DIR = Path("output")
@@ -62,10 +78,9 @@ OPENAI_SAMPLE_RATE = 24000
 # Models are read from .env.
 # Recommended:
 #   SCRIPT_MODEL=gpt-5.2-pro
-#   TTS_MODEL=gpt-4o-mini-tts
+#   ELEVENLABS_MODEL=eleven_flash_v2_5     (audio engine, see Config)
 #   EMOTION_MODEL=gpt-4o-mini
 SCRIPT_MODEL = os.getenv("SCRIPT_MODEL", "gpt-5.2-pro")
-TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
 EMOTION_MODEL = os.getenv("EMOTION_MODEL", "gpt-4o-mini")
 
 
@@ -391,6 +406,70 @@ async def _configure(conn: Any, instructions: str, voice: str) -> None:
     )
 
 
+async def _configure_text_only(conn: Any, instructions: str) -> None:
+    """Configure a Realtime session to emit text only.
+
+    Audio is generated separately via ElevenLabs.
+    """
+    await conn.session.update(
+        session={
+            "type": "realtime",
+            "instructions": instructions,
+            "output_modalities": ["text"],
+            "audio": {
+                "input": {
+                    "format": {"type": "audio/pcm", "rate": OPENAI_SAMPLE_RATE},
+                    "turn_detection": None,
+                },
+            },
+        },
+    )
+
+
+async def _collect_text_response(conn: Any, label: str) -> str:
+    """Collect just the text transcript from a text-only Realtime response."""
+    transcript_parts: list[str] = []
+    empty_responses = 0
+
+    async for event in conn:
+        event_type = event.type
+
+        if event_type == "response.output_text.delta":
+            transcript_parts.append(event.delta)
+
+        elif event_type == "response.output_audio_transcript.delta":
+            # Fallback in case audio modality leaks back on
+            transcript_parts.append(event.delta)
+
+        elif event_type == "response.done":
+            transcript = "".join(transcript_parts).strip()
+
+            if transcript:
+                return transcript
+
+            empty_responses += 1
+
+            if empty_responses <= 2:
+                logger.warning(
+                    "[%s] Empty text response #%d. Retrying in 2s...",
+                    label,
+                    empty_responses,
+                )
+                await asyncio.sleep(2)
+                await conn.response.create()
+                continue
+
+            logger.error("[%s] Still empty after %d retries.", label, empty_responses)
+            break
+
+        elif event_type == "error":
+            logger.error("[%s] API error: %s", label, event)
+            if "invalid" in str(getattr(event, "error", "")).lower():
+                break
+
+    return "".join(transcript_parts).strip() or "[no response]"
+
+
 async def _inject(conn: Any, text: str) -> None:
     """Inject text into a Realtime session and ask for a response."""
     await conn.conversation.item.create(
@@ -410,40 +489,39 @@ async def _generate_audio(
     session_name: str = "ai_collaboration",
     output_dir: Path = BASE_OUTPUT_DIR,
 ) -> list[dict]:
-    """Generate all turns as audio and transcript using Realtime.
+    """Generate all turns as transcript via Realtime (text-only) + ElevenLabs audio.
 
-    This is kept for the normal non-video podcast mode.
+    Text comes from the Realtime API in text-only mode so conversational state
+    is preserved across turns. Audio is synthesized per turn through ElevenLabs.
     """
     client = AsyncOpenAI(api_key=config.openai_api_key)
     turns: list[dict] = []
 
+    async def _turn(conn: Any, label: str, role: str, turn_num: int) -> str:
+        transcript = await _collect_text_response(conn, label)
+        audio = await _generate_tts_audio(config=config, text=transcript, role=role)
+        _save_turn(turns, turn_num, role, transcript, audio, output_dir)
+        return transcript
+
     async with client.realtime.connect(model=config.openai_model) as conn_a:
         async with client.realtime.connect(model=config.openai_model) as conn_b:
             async with client.realtime.connect(model=config.openai_model) as conn_c:
-                await _configure(
-                    conn_a,
-                    student_prompt(total_turns, session_name),
-                    config.robot_a.voice,
+                await _configure_text_only(
+                    conn_a, student_prompt(total_turns, session_name)
                 )
-                await _configure(
-                    conn_b,
-                    professor_prompt(total_turns, session_name),
-                    config.robot_b.voice,
+                await _configure_text_only(
+                    conn_b, professor_prompt(total_turns, session_name)
                 )
-                await _configure(
-                    conn_c,
-                    moderator_prompt(total_turns, session_name),
-                    config.robot_c.voice,
+                await _configure_text_only(
+                    conn_c, moderator_prompt(total_turns, session_name)
                 )
 
-                logger.info("Three Realtime sessions configured.")
+                logger.info("Three Realtime sessions configured (text-only).")
 
                 await _inject(conn_a, opening_seed(total_turns, session_name))
-                transcript_a, audio_a = await _collect_audio_response(conn_a, "Student")
-                _save_turn(turns, 1, "student", transcript_a, audio_a, output_dir)
+                last_transcript = await _turn(conn_a, "Student", "student", 1)
 
                 turn = 1
-                last_transcript = transcript_a
 
                 while turn < total_turns:
                     # Professor turn
@@ -454,8 +532,7 @@ async def _generate_audio(
                         msg_b += "\n\n[SYSTEM: " + closing_nudge_professor(total_turns) + "]"
 
                     await _inject(conn_b, msg_b)
-                    transcript_b, audio_b = await _collect_audio_response(conn_b, "Professor")
-                    _save_turn(turns, turn, "professor", transcript_b, audio_b, output_dir)
+                    transcript_b = await _turn(conn_b, "Professor", "professor", turn)
 
                     if turn >= total_turns:
                         break
@@ -472,8 +549,7 @@ async def _generate_audio(
                         )
 
                     await _inject(conn_c, msg_c)
-                    transcript_c, audio_c = await _collect_audio_response(conn_c, "Moderator")
-                    _save_turn(turns, turn, "moderator", transcript_c, audio_c, output_dir)
+                    transcript_c = await _turn(conn_c, "Moderator", "moderator", turn)
 
                     if turn >= total_turns:
                         break
@@ -486,10 +562,7 @@ async def _generate_audio(
                         msg_a += "\n\n[SYSTEM: " + closing_nudge_student(total_turns) + "]"
 
                     await _inject(conn_a, msg_a)
-                    transcript_a, audio_a = await _collect_audio_response(conn_a, "Student")
-                    _save_turn(turns, turn, "student", transcript_a, audio_a, output_dir)
-
-                    last_transcript = transcript_a
+                    last_transcript = await _turn(conn_a, "Student", "student", turn)
 
     return turns
 
@@ -934,49 +1007,31 @@ async def _polish_for_tts(
     return polished.strip()
 
 
-async def _read_tts_response_bytes(response: Any) -> bytes:
-    """Read binary bytes from an OpenAI TTS response."""
-    if hasattr(response, "content"):
-        content = response.content
-
-        if inspect.isawaitable(content):
-            content = await content
-
-        return content
-
-    if hasattr(response, "read"):
-        maybe_bytes = response.read()
-
-        if inspect.isawaitable(maybe_bytes):
-            maybe_bytes = await maybe_bytes
-
-        return maybe_bytes
-
-    raise TypeError("Unexpected TTS response type. Could not read audio bytes.")
-
-
 async def _generate_tts_audio(
-    client: AsyncOpenAI,
+    config: Config,
     text: str,
     role: str,
-    model: str = TTS_MODEL,
 ) -> bytes:
-    """Generate raw PCM audio for one robot turn using gpt-4o-mini-tts."""
-    profile = PHILOSOPHER_PROFILES[role]
+    """Generate raw 24 kHz PCM int16 audio for one robot turn via ElevenLabs."""
+    voice_id = _voice_id_for_role(config, role)
+    settings = settings_for(role)
 
-    response = await client.audio.speech.create(
-        model=model,
-        voice=profile["tts_voice"],
-        input=text,
-        instructions=profile["tts_instructions"],
-        response_format="pcm",
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: synthesize_pcm(
+            text=text,
+            voice_id=voice_id,
+            settings=settings,
+            api_key=config.elevenlabs_api_key,
+            model_id=config.elevenlabs_model,
+        ),
     )
-
-    return await _read_tts_response_bytes(response)
 
 
 async def _generate_and_save_tts_turn(
     client: AsyncOpenAI,
+    config: Config,
     turns: list[dict],
     turn_num: int,
     role: str,
@@ -998,7 +1053,7 @@ async def _generate_and_save_tts_turn(
     )
 
     audio = await _generate_tts_audio(
-        client=client,
+        config=config,
         text=tts_text,
         role=role,
     )
@@ -1053,6 +1108,7 @@ async def _generate_video_discussion_text_tts(
 
     await _generate_and_save_tts_turn(
         client=client,
+        config=config,
         turns=turns,
         turn_num=1,
         role="student",
@@ -1302,7 +1358,7 @@ async def run_generate_video_discussion(
     print(f"  Total turns: {total_turns}")
     print("  Turn order: Bentham-Bot -> Korsgaard-Bot -> Aquinas-Bot")
     print(f"  Script model: {SCRIPT_MODEL}")
-    print(f"  TTS model: {TTS_MODEL}")
+    print(f"  TTS model: {config.elevenlabs_model} (ElevenLabs)")
     print("  Step 1/2: Generating script + TTS audio...")
 
     turns = await _generate_video_discussion_text_tts(
@@ -1326,14 +1382,15 @@ async def run_generate_video_discussion(
         "title": title,
         "discussion_type": "video_discussion",
         "target_duration": "about 3 minutes",
-        "generation_mode": "text_model_plus_tts",
+        "generation_mode": "text_model_plus_elevenlabs",
         "script_model": SCRIPT_MODEL,
-        "tts_model": TTS_MODEL,
+        "tts_engine": "elevenlabs",
+        "tts_model": config.elevenlabs_model,
         "emotion_model": EMOTION_MODEL,
         "realtime_model_fallback": config.openai_model,
-        "student_voice": PHILOSOPHER_PROFILES["student"]["tts_voice"],
-        "professor_voice": PHILOSOPHER_PROFILES["professor"]["tts_voice"],
-        "moderator_voice": PHILOSOPHER_PROFILES["moderator"]["tts_voice"],
+        "student_voice": config.robot_a.voice,
+        "professor_voice": config.robot_b.voice,
+        "moderator_voice": config.robot_c.voice,
         "student_profile": {
             "bot_name": PHILOSOPHER_PROFILES["student"]["bot_name"],
             "philosopher": PHILOSOPHER_PROFILES["student"]["philosopher"],
@@ -1440,8 +1497,10 @@ async def run_generate(
     meta = {
         "session": session_name,
         "title": session["title"],
-        "generation_mode": "realtime",
+        "generation_mode": "realtime_text_plus_elevenlabs",
         "model": config.openai_model,
+        "tts_engine": "elevenlabs",
+        "tts_model": config.elevenlabs_model,
         "emotion_model": EMOTION_MODEL,
         "student_voice": config.robot_a.voice,
         "professor_voice": config.robot_b.voice,

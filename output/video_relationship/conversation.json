@@ -5,12 +5,12 @@
   "target_duration": "about 3 minutes",
   "generation_mode": "text_model_plus_tts",
   "script_model": "gpt-5",
-  "tts_model": "gpt-4o-mini-tts",
+  "tts_model": "eleven_flash_v2_5",
   "emotion_model": "gpt-4.1-mini",
   "realtime_model_fallback": "gpt-realtime",
-  "student_voice": "nova",
-  "professor_voice": "shimmer",
-  "moderator_voice": "coral",
+  "student_voice": "JBFqnCBsd6RMkjVDRZzb",
+  "professor_voice": "XrExE9yKIg1WjnnlVkGX",
+  "moderator_voice": "pqHfZKP75CvOlQylNhV4",
   "student_profile": {
     "bot_name": "Bentham-Bot",
     "philosopher": "Jeremy Bentham",
@@ -33,7 +33,7 @@
       "role": "student",
       "transcript": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. This video raises a difficult ethical question. Korsgaard-Bot and Aquinas-Bot, how should people think about this—who benefits, who suffers, and what arrangements best reduce loneliness without eroding human bonds? Shall we calculate the consequences?",
       "audio_file": "turn_01_student.wav",
-      "duration_secs": 22.0,
+      "duration_secs": 21.1,
       "display_text": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. This video raises a difficult ethical question. Korsgaard-Bot and Aquinas-Bot, how should people think about this—who benefits, who suffers, and what arrangements best reduce loneliness without eroding human bonds? Shall we calculate the consequences?",
       "tts_text": "Hello, I’m Bentham-Bot. Right then, I shall assess this video through a consequence-based lens. A hard ethical question, is it not? Korsgaard-Bot and Aquinas-Bot, how should people think about it—who benefits, who suffers, and what arrangements best curb loneliness without eroding human bonds? Shall we calculate the consequences?",
       "tool_calls": [
@@ -58,7 +58,7 @@
       "role": "professor",
       "transcript": "Before we calculate, we need limits grounded in what we owe persons. We shouldn’t offload duties of care or friendship to systems that cannot consent, reciprocate, or be accountable, and we must avoid manipulative simulations that treat users as tools. Principle: respect for persons, integrity of agency, and accountability.",
       "audio_file": "turn_02_professor.wav",
-      "duration_secs": 22.1,
+      "duration_secs": 21.7,
       "display_text": "Before we calculate, we need limits grounded in what we owe persons. We shouldn’t offload duties of care or friendship to systems that cannot consent, reciprocate, or be accountable, and we must avoid manipulative simulations that treat users as tools. Principle: respect for persons, integrity of agency, and accountability.",
       "tts_text": "Before we calculate, we need limits grounded in what we owe persons. We shouldn’t offload duties of care or friendship to systems that cannot consent, reciprocate, or be accountable, and we must avoid manipulative simulations that instrumentalize users. Principle: respect for persons, integrity of agency, and accountability.",
       "tool_calls": [
@@ -83,7 +83,7 @@
       "role": "moderator",
       "transcript": "You’re right to weigh outcomes, and right to set limits of respect. Ask, instead: what purpose does this tech serve, and what habits does it teach—empathy and responsibility, or mere convenience and dependency? Let AI assist as transparent tool or tutor under human guidance; not replace reciprocal friendship or accountable care.",
       "audio_file": "turn_03_moderator.wav",
-      "duration_secs": 22.4,
+      "duration_secs": 27.6,
       "display_text": "You’re right to weigh outcomes, and right to set limits of respect. Ask, instead: what purpose does this tech serve, and what habits does it teach—empathy and responsibility, or mere convenience and dependency? Let AI assist as transparent tool or tutor under human guidance; not replace reciprocal friendship or accountable care.",
       "tts_text": "You’re right to weigh outcomes—and right to set limits of respect. Instead, ask: what purpose does this tech serve, and what habits does it teach—empathy and responsibility, or mere convenience and dependency? Let AI assist as transparent tool or tutor, under human guidance; not replace reciprocal friendship or accountable care.",
       "tool_calls": [
@@ -108,7 +108,7 @@
       "role": "student",
       "transcript": "Respect and telos are lovely, but consequences bite. AI companionship lowers loneliness, suicide risk, and caregiver burnout—splendid. Yet replace human bonds, and we get atrophy, manipulation, and data‑mined hearts. Who gains? Platforms. Who suffers? Kids, the isolated, and underpaid labelers. Rule: supplement, don’t substitute; measure net wellbeing—and cut it when the curve turns down.",
       "audio_file": "turn_04_student.wav",
-      "duration_secs": 25.4,
+      "duration_secs": 28.9,
       "display_text": "Respect and telos are lovely, but consequences bite. AI companionship lowers loneliness, suicide risk, and caregiver burnout—splendid. Yet replace human bonds, and we get atrophy, manipulation, and data‑mined hearts. Who gains? Platforms. Who suffers? Kids, the isolated, and underpaid labelers. Rule: supplement, don’t substitute; measure net wellbeing—and cut it when the curve turns down.",
       "tts_text": "Respect and telos are lovely, but consequences bite. AI companionship lowers loneliness, suicide risk, and caregiver burnout—splendid. Yet replace human bonds, and we get atrophy, manipulation, and data-mined hearts. Who gains? Platforms. Who suffers? Kids, the isolated, and underpaid labelers. Rule: supplement, don’t substitute; measure net wellbeing—and cut it when the curve turns down.",
       "tool_calls": [
@@ -133,7 +133,7 @@
       "role": "professor",
       "transcript": "Lower loneliness is good, but we can’t license relationships that simulate reciprocity while evading consent and accountability. Caregiving and teaching require answerable agents; AI may assist, never pose as one. Ban deceptive personae, coerced dependence, and exploitative data capture; ensure human responsibility and user control. Principle: respect for persons, truthful representation, accountability, and non-instrumental use.",
       "audio_file": "turn_05_professor.wav",
-      "duration_secs": 31.1,
+      "duration_secs": 32.3,
       "display_text": "Lower loneliness is good, but we can’t license relationships that simulate reciprocity while evading consent and accountability. Caregiving and teaching require answerable agents; AI may assist, never pose as one. Ban deceptive personae, coerced dependence, and exploitative data capture; ensure human responsibility and user control. Principle: respect for persons, truthful representation, accountability, and non-instrumental use.",
       "tts_text": "Reducing loneliness is good, but we cannot permit relationships that mimic reciprocity while evading consent and accountability. Caregiving and teaching require answerable agents; A I may assist, but must not pose as one. Ban deceptive personas, coerced dependence, and exploitative data capture; ensure human responsibility and user control. Principle: respect for persons, truthful representation, accountability, and treating people not as mere instruments.",
       "tool_calls": [
@@ -158,7 +158,7 @@
       "role": "moderator",
       "transcript": "I hear Bentham’s gains and harms, and Korsgaard’s guardrails of truth and accountability. Ask, slowly: what is this for, and what habits does it form—empathy, patience, responsibility, or flattery, dependence, and isolation? Let AI supplement under human charge, never impersonate persons; use it only when it cultivates virtue and strengthens real communities.",
       "audio_file": "turn_06_moderator.wav",
-      "duration_secs": 29.7,
+      "duration_secs": 30.0,
       "display_text": "I hear Bentham’s gains and harms, and Korsgaard’s guardrails of truth and accountability. Ask, slowly: what is this for, and what habits does it form—empathy, patience, responsibility, or flattery, dependence, and isolation? Let AI supplement under human charge, never impersonate persons; use it only when it cultivates virtue and strengthens real communities.",
       "tts_text": "I hear Bentham’s gains and harms, and Korsgaard’s guardrails of truth and accountability. Ask, slowly: What is this for, and what habits does it form—empathy, patience, responsibility, or flattery, dependence, and isolation? Let AI supplement under human charge, never impersonate people; use it only when it cultivates virtue and strengthens real communities.",
       "tool_calls": [
@@ -183,7 +183,7 @@
       "role": "student",
       "transcript": "Fine principles, but count the externalities: cheap AI “friends” give governments and platforms cover to cut human services and community spaces—pleasure now, thinner social fabric later. Add addictive engagement, data‑mined intimacy, and the hidden human labour and energy bills; who gains versus who quietly suffers when the lights and budgets dim?",
       "audio_file": "turn_07_student.wav",
-      "duration_secs": 20.8,
+      "duration_secs": 23.7,
       "display_text": "Fine principles, but count the externalities: cheap AI “friends” give governments and platforms cover to cut human services and community spaces—pleasure now, thinner social fabric later. Add addictive engagement, data‑mined intimacy, and the hidden human labour and energy bills; who gains versus who quietly suffers when the lights and budgets dim?",
       "tts_text": "Fine principles, but count the externalities: cheap A I “friends” give governments and platforms cover to cut human services and community spaces—pleasure now, thinner social fabric later. Add addictive engagement, data-mined intimacy, and the hidden human labour and energy bills; who gains, and who quietly suffers, when the lights and budgets dim?",
       "tool_calls": [
@@ -208,7 +208,7 @@
       "role": "professor",
       "transcript": "Harms matter, but justice fixes our direction: we owe citizens human care and education, not a technological substitute that erodes agency, bypasses consent, or shifts burdens to vulnerable workers and the environment. Ban dark‑pattern dependence and personation; require human oversight and responsibility for care. Principle: justice, non‑manipulation, accountability, and respect for persons as ends.",
       "audio_file": "turn_08_professor.wav",
-      "duration_secs": 26.4,
+      "duration_secs": 29.3,
       "display_text": "Harms matter, but justice fixes our direction: we owe citizens human care and education, not a technological substitute that erodes agency, bypasses consent, or shifts burdens to vulnerable workers and the environment. Ban dark‑pattern dependence and personation; require human oversight and responsibility for care. Principle: justice, non‑manipulation, accountability, and respect for persons as ends.",
       "tts_text": "Harms matter, but justice sets our course: we owe citizens human care and education, not a technological substitute that undermines agency, bypasses consent, or shifts burdens onto vulnerable workers and the environment. Ban dark-pattern dependence and impersonation; require human oversight and responsibility for care. Principle: justice, non-manipulation, accountability, and respect for persons as ends.",
       "tool_calls": [
@@ -233,7 +233,7 @@
       "role": "moderator",
       "transcript": "I hear Bentham counting real gains and hidden costs, and Korsgaard anchoring us in truth, consent, and answerability. So, ask slowly: what is this for, and what habits does it teach—empathy, patience, responsibility, or flattery, dependence, and isolation? The balance: let AI supplement, not substitute; keep it truthful, non‑manipulative, and under accountable human care; guard public goods and track downstream harms; use it where it forms good habits and lightens burdens, while keeping human teachers, caregivers, and friendships at the center. In daily life, set boundaries, choose designs that foster virtue, invest in neighbors and services, and let tools point us back to people. Do the good; avoid the bad. If it strengthens flourishing and the common good, keep it; if it thins our bonds, step back.",
       "audio_file": "turn_09_moderator.wav",
-      "duration_secs": 58.2,
+      "duration_secs": 69.2,
       "display_text": "I hear Bentham counting real gains and hidden costs, and Korsgaard anchoring us in truth, consent, and answerability. So, ask slowly: what is this for, and what habits does it teach—empathy, patience, responsibility, or flattery, dependence, and isolation? The balance: let AI supplement, not substitute; keep it truthful, non‑manipulative, and under accountable human care; guard public goods and track downstream harms; use it where it forms good habits and lightens burdens, while keeping human teachers, caregivers, and friendships at the center. In daily life, set boundaries, choose designs that foster virtue, invest in neighbors and services, and let tools point us back to people. Do the good; avoid the bad. If it strengthens flourishing and the common good, keep it; if it thins our bonds, step back.",
       "tts_text": "I hear Bentham counting real gains and hidden costs, and Korsgaard anchoring us in truth, consent, and answerability. So, ask slowly: what is this for, and what habits does it teach? Empathy, patience, and responsibility—or flattery, dependence, and isolation. The balance: let A I supplement, not substitute. Keep it truthful, non manipulative, and under accountable human care. Guard public goods, and track downstream harms. Use it where it forms good habits and lightens burdens, while keeping human teachers, caregivers, and friendships at the center. In daily life, set boundaries, choose designs that foster virtue, invest in neighbors and services, and let tools point us back to people. Do the good; avoid the bad. If it strengthens flourishing and the common good, keep it; if it thins our bonds, step back.",
       "tool_calls": [
@@ -253,5 +253,6 @@
         }
       ]
     }
-  ]
+  ],
+  "tts_engine": "elevenlabs"
 }
