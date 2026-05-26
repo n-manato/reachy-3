@@ -237,6 +237,7 @@ name = "ethics-podcast"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx", marker = "sys_platform == 'win32'" },
     { name = "numpy", marker = "sys_platform == 'win32'" },
     { name = "openai", marker = "sys_platform == 'win32'" },
     { name = "pycairo", marker = "sys_platform == 'win32'" },
@@ -251,6 +252,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
     { name = "numpy" },
     { name = "openai", specifier = ">=2.28.0" },
     { name = "pycairo" },

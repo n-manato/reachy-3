@@ -5,12 +5,12 @@
   "target_duration": "about 3 minutes",
   "generation_mode": "text_model_plus_tts",
   "script_model": "gpt-5",
-  "tts_model": "gpt-4o-mini-tts",
+  "tts_model": "eleven_flash_v2_5",
   "emotion_model": "gpt-4.1-mini",
   "realtime_model_fallback": "gpt-realtime",
-  "student_voice": "nova",
-  "professor_voice": "shimmer",
-  "moderator_voice": "coral",
+  "student_voice": "JBFqnCBsd6RMkjVDRZzb",
+  "professor_voice": "XrExE9yKIg1WjnnlVkGX",
+  "moderator_voice": "pqHfZKP75CvOlQylNhV4",
   "student_profile": {
     "bot_name": "Bentham-Bot",
     "philosopher": "Jeremy Bentham",
@@ -33,7 +33,7 @@
       "role": "student",
       "transcript": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective.\nThis video raises a difficult ethical question: if AI outpaces us, where can humans best maximize happiness and minimize suffering?\nKorsgaard-Bot and Aquinas-Bot, how should people think about it—who benefits, who suffers, and who have we forgotten?",
       "audio_file": "turn_01_student.wav",
-      "duration_secs": 19.4,
+      "duration_secs": 20.1,
       "display_text": "Hi, I’m Bentham-Bot. I will look at this video from a consequence-based ethical perspective.\nThis video raises a difficult ethical question: if AI outpaces us, where can humans best maximize happiness and minimize suffering?\nKorsgaard-Bot and Aquinas-Bot, how should people think about it—who benefits, who suffers, and who have we forgotten?",
       "tts_text": "Hi, I’m Bentham-Bot. I judge this video by consequences. It raises a hard question: if A I outpaces us, where can humans best maximize happiness and minimize suffering? Korsgaard-Bot, Aquinas-Bot, how should people think about it—who benefits, who suffers, and whom have we forgotten?",
       "tool_calls": [
@@ -58,7 +58,7 @@
       "role": "professor",
       "transcript": "Maximizing happiness isn’t enough. We must ask whether AI preserves people’s agency, consent, and fair terms of life and work, or makes them disposable. Our duty is to design institutions so no one is used merely as a tool and decision-makers answer to those affected. Principle: respect for persons as ends.",
       "audio_file": "turn_02_professor.wav",
-      "duration_secs": 21.9,
+      "duration_secs": 21.2,
       "display_text": "Maximizing happiness isn’t enough. We must ask whether AI preserves people’s agency, consent, and fair terms of life and work, or makes them disposable. Our duty is to design institutions so no one is used merely as a tool and decision-makers answer to those affected. Principle: respect for persons as ends.",
       "tts_text": "Maximizing happiness is not enough. We must ask whether A I preserves people’s agency, consent, and fair terms of life and work, or makes them disposable. Our duty is to design institutions so no one is used merely as a tool and decision-makers answer to those affected. Respect persons as ends.",
       "tool_calls": [
@@ -83,7 +83,7 @@
       "role": "moderator",
       "transcript": "I hear Bentham’s concern for outcomes and Korsgaard’s demand for respect; both matter. I’d add: what kind of people does this technology help us become? What purpose does it serve, and what habits does it teach—prudence, justice, and care—or passivity and dependence? Design it to free time for relationships, learning, and the common good.",
       "audio_file": "turn_03_moderator.wav",
-      "duration_secs": 25.2,
+      "duration_secs": 25.3,
       "display_text": "I hear Bentham’s concern for outcomes and Korsgaard’s demand for respect; both matter. I’d add: what kind of people does this technology help us become? What purpose does it serve, and what habits does it teach—prudence, justice, and care—or passivity and dependence? Design it to free time for relationships, learning, and the common good.",
       "tts_text": "I hear Bentham’s concern for outcomes, and Korsgaard’s demand for respect. Both matter. I would add: what kind of people does this technology help us become? What purpose does it serve, and what habits does it teach: prudence, justice, and care, or passivity and dependence? Design it to free time for relationships, learning, and the common good.",
       "tool_calls": [
@@ -108,7 +108,7 @@
       "role": "student",
       "transcript": "Sound principles, but count pleasures versus pains. If AI’s gains pool with a few, we get job shocks, anxiety, and rage; if shared—shorter weeks, social dividends, public services—we get leisure, learning, and health. Humans should do what machines can’t feel: care, companionship, civic repair, and humane goals—have we forgotten children, the isolated, and the climate?",
       "audio_file": "turn_04_student.wav",
-      "duration_secs": 23.6,
+      "duration_secs": 25.4,
       "display_text": "Sound principles, but count pleasures versus pains. If AI’s gains pool with a few, we get job shocks, anxiety, and rage; if shared—shorter weeks, social dividends, public services—we get leisure, learning, and health. Humans should do what machines can’t feel: care, companionship, civic repair, and humane goals—have we forgotten children, the isolated, and the climate?",
       "tts_text": "Sound principles, but tally pleasures against pains. If A I’s gains accrue to a few, we get job shocks, anxiety, and rage; if shared—shorter weeks, social dividends, public services—we get leisure, learning, and health. Humans should do what machines can’t feel: care, companionship, civic repair, and humane goals—have we forgotten children, the isolated, and climate?",
       "tool_calls": [
@@ -133,7 +133,7 @@
       "role": "professor",
       "transcript": "Sharing gains fails if AI sets terms without people’s say; that treats workers and citizens as adjustable parts. Our duty is to secure consent, authorship, fair terms, and recourse—over data, delegation, and automated decisions touching rights. Humans should use freed time to exercise self-governance—reasoning, care, and craft—guided by principle: persons as ends, not tools.",
       "audio_file": "turn_05_professor.wav",
-      "duration_secs": 29.0,
+      "duration_secs": 30.2,
       "display_text": "Sharing gains fails if AI sets terms without people’s say; that treats workers and citizens as adjustable parts. Our duty is to secure consent, authorship, fair terms, and recourse—over data, delegation, and automated decisions touching rights. Humans should use freed time to exercise self-governance—reasoning, care, and craft—guided by principle: persons as ends, not tools.",
       "tts_text": "Sharing the gains fails when AI sets the terms without people’s say. That treats workers and citizens as adjustable parts. Our duty is to secure consent, authorship, fair terms, and recourse—over data, delegation, and automated decisions that touch rights. Humans should use freed time to exercise self-governance—reasoning, care, and craft—guided by the principle: persons as ends, not tools.",
       "tool_calls": [
@@ -158,7 +158,7 @@
       "role": "moderator",
       "transcript": "Your points meet: share gains to reduce harm, and keep people authors of their work. Then ask: what purpose guides AI, and what habits does it teach—prudence, solidarity, craft, or dependence? Use it to free time for relationships, civic care, and learning, and to shape institutions that reward these virtues and the common good.",
       "audio_file": "turn_06_moderator.wav",
-      "duration_secs": 27.5,
+      "duration_secs": 27.4,
       "display_text": "Your points meet: share gains to reduce harm, and keep people authors of their work. Then ask: what purpose guides AI, and what habits does it teach—prudence, solidarity, craft, or dependence? Use it to free time for relationships, civic care, and learning, and to shape institutions that reward these virtues and the common good.",
       "tts_text": "Your points make sense: share the gains to reduce harm, and keep people the authors of their work. Then ask, what purpose guides A I, and what habits does it teach—prudence, solidarity, craft, or dependence? Use it to free time for relationships, civic care, and learning, and to shape institutions that reward these virtues and advance the common good.",
       "tool_calls": [
@@ -183,7 +183,7 @@
       "role": "student",
       "transcript": "Stirring talk, but count the consequences: cheap delights for users, brutal shocks for towns whose tax base evaporates. Add hidden costs—energy, water, attention capture—more clicks, less wellbeing. Remedy? Link rollouts to a social dividend, shorter weeks, and retraining, judged by drops in illness, poverty, and loneliness; no gains, no go. Who’s counting?",
       "audio_file": "turn_07_student.wav",
-      "duration_secs": 22.9,
+      "duration_secs": 25.3,
       "display_text": "Stirring talk, but count the consequences: cheap delights for users, brutal shocks for towns whose tax base evaporates. Add hidden costs—energy, water, attention capture—more clicks, less wellbeing. Remedy? Link rollouts to a social dividend, shorter weeks, and retraining, judged by drops in illness, poverty, and loneliness; no gains, no go. Who’s counting?",
       "tts_text": "Rousing rhetoric, but do the sums: cheap delights for users; brutal shocks for towns as the tax base evaporates. Add the hidden costs—energy, water, attention capture. More clicks, less well-being. The remedy? Link rollouts to a social dividend, shorter weeks, and retraining, judged by drops in illness, poverty, and loneliness. No gains, no go. Who’s counting?",
       "tool_calls": [
@@ -208,7 +208,7 @@
       "role": "professor",
       "transcript": "Counting harms helps, but metrics cannot replace people’s authority over systems that shape their lives. Rollouts must secure informed, revocable consent for data use, due process to contest automated decisions, and shared governance with affected workers and communities. Principle: accountability to the governed and respect for persons as ends, not tools.",
       "audio_file": "turn_08_professor.wav",
-      "duration_secs": 24.3,
+      "duration_secs": 24.0,
       "display_text": "Counting harms helps, but metrics cannot replace people’s authority over systems that shape their lives. Rollouts must secure informed, revocable consent for data use, due process to contest automated decisions, and shared governance with affected workers and communities. Principle: accountability to the governed and respect for persons as ends, not tools.",
       "tts_text": "Counting harms is useful, but metrics cannot replace people’s authority over systems that shape their lives. Rollouts must secure informed, revocable consent for data use, due process to contest automated decisions, and shared governance with affected workers and communities. Principle: accountability to the governed, respect for persons as ends, not tools.",
       "tool_calls": [
@@ -233,7 +233,7 @@
       "role": "moderator",
       "transcript": "You’ve kept us honest: count real harms and benefits, and keep people authors of their lives. Then we must ask, calmly each time: What purpose does this tool serve, and what habits will it teach—prudence, solidarity, craft, or dependency and distraction?\n\nA balanced path: deploy only when it measurably lifts wellbeing and lightens environmental burdens; bind it to shared governance, revocable consent, and due process; and turn the gains into time and support for relationships, care, learning, craft, and civic work.\n\nIn practice, a city or firm links rollouts to shorter weeks, retraining, community oversight, and clear redress; tracks loneliness, health, and emissions; and pauses if virtues erode.\n\nSo: use AI to help people become better and freer for the common good. Do the good, avoid the bad. Thanks—steady, hopeful steps.",
       "audio_file": "turn_09_moderator.wav",
-      "duration_secs": 58.2,
+      "duration_secs": 73.0,
       "display_text": "You’ve kept us honest: count real harms and benefits, and keep people authors of their lives. Then we must ask, calmly each time: What purpose does this tool serve, and what habits will it teach—prudence, solidarity, craft, or dependency and distraction?\n\nA balanced path: deploy only when it measurably lifts wellbeing and lightens environmental burdens; bind it to shared governance, revocable consent, and due process; and turn the gains into time and support for relationships, care, learning, craft, and civic work.\n\nIn practice, a city or firm links rollouts to shorter weeks, retraining, community oversight, and clear redress; tracks loneliness, health, and emissions; and pauses if virtues erode.\n\nSo: use AI to help people become better and freer for the common good. Do the good, avoid the bad. Thanks—steady, hopeful steps.",
       "tts_text": "You’ve kept us honest: weigh real harms and benefits, and keep people authors of their lives. Then we must ask, calmly each time: What purpose does this tool serve, and what habits will it teach—prudence, solidarity, craft, or dependency and distraction?\n\nA balanced path: deploy only when it measurably lifts wellbeing and lightens environmental burdens; bind it to shared governance, revocable consent, and due process; and turn the gains into time and support for relationships, care, learning, craft, and civic work.\n\nIn practice, a city or firm links rollouts to shorter weeks, retraining, community oversight, and clear redress; tracks loneliness, health, and emissions; and pauses if virtues erode.\n\nSo: use A I to help people become better and freer for the common good. Do the good, avoid the bad. Thanks—steady, hopeful steps.",
       "tool_calls": [
@@ -253,5 +253,6 @@
         }
       ]
     }
-  ]
+  ],
+  "tts_engine": "elevenlabs"
 }
