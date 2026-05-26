@@ -61,6 +61,18 @@ ROBOT_NAMES = {
     "moderator": "Aquinas-Bot",
 }
 
+
+# Aliases for orchestrator.py's two-robot live mode. The orchestrator runs
+# Bentham (student) vs Korsgaard (professor) only; Aquinas is reserved for the
+# three-robot recorded mode that goes through generator.py + player.py.
+STUDENT_PROMPT = BENTHAM_PROMPT
+PROFESSOR_PROMPT = KORSGAARD_PROMPT
+OPENING_SEED = (
+    "Start a short ethics discussion with the professor. "
+    "Briefly introduce yourself as Bentham-Bot, then ask a single concrete "
+    "ethical question about modern technology — keep it under 30 words."
+)
+
 ROBOT_LAYOUT = {
     "student": {
         "name": "Bentham-Bot",
