@@ -10,24 +10,35 @@ import numpy as np
 import vlc
 from scipy.io import wavfile
 
-from PySide6.QtCore import QObject, Qt, QTimer
+from PySide6.QtCore import QObject, QRectF, Qt, QTimer
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+    QRadialGradient,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
-    QGridLayout,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QScrollArea,
     QSizePolicy,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
 )
 
-from ethics_podcast.AudioOrbWidget import AudioOrbWidget
-
 
 VIDEO_VOLUME = 75
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PICTURE_DIR = PROJECT_ROOT / "picture"
 
 
 def _get_app() -> QApplication:
@@ -59,29 +70,74 @@ def _read_arrow_key_windows() -> str | None:
     return None
 
 
-class AudioLevelFollower(QObject):
-    """Drive AudioOrbWidget from the currently playing robot WAV file."""
+def _add_shadow(
+    widget: QWidget,
+    blur: int = 28,
+    y_offset: int = 8,
+    alpha: int = 80,
+    color: str = "#00d9ff",
+) -> None:
+    shadow = QGraphicsDropShadowEffect(widget)
+    shadow.setBlurRadius(blur)
+    shadow.setOffset(0, y_offset)
 
-    def __init__(self, orb_widget: AudioOrbWidget):
+    qcolor = QColor(color)
+    qcolor.setAlpha(alpha)
+
+    shadow.setColor(qcolor)
+    widget.setGraphicsEffect(shadow)
+
+
+def _get_audio_duration_secs(audio_path: str | Path | None) -> float | None:
+    if audio_path is None:
+        return None
+
+    path = Path(audio_path)
+
+    if not path.exists():
+        return None
+
+    try:
+        sample_rate, data = wavfile.read(path)
+    except Exception:
+        return None
+
+    if sample_rate <= 0:
+        return None
+
+    return len(data) / float(sample_rate)
+
+
+class AudioLevelFollower(QObject):
+    """Read the current robot WAV file and drive the active speaker avatar."""
+
+    def __init__(self):
         super().__init__()
 
-        self.orb_widget = orb_widget
         self.audio: np.ndarray | None = None
         self.sample_rate: int | None = None
         self.start_time: float | None = None
+        self.target_panel = None
 
         self.timer = QTimer()
         self.timer.timeout.connect(self._update_level)
 
-    def start(self, audio_path: str | Path) -> None:
+    def start(self, audio_path: str | Path, target_panel) -> None:
+        self.stop()
+
         path = Path(audio_path)
 
         if not path.exists():
-            print(f"  WARNING: Orb audio file not found: {path}")
-            self.orb_widget.set_audio_level(0.45)
+            print(f"  WARNING: UI audio file not found: {path}")
+            target_panel.set_audio_level(0.45)
             return
 
-        sample_rate, data = wavfile.read(path)
+        try:
+            sample_rate, data = wavfile.read(path)
+        except Exception as e:
+            print(f"  WARNING: Could not read UI audio file: {path} ({e})")
+            target_panel.set_audio_level(0.45)
+            return
 
         if data.ndim > 1:
             data = data.mean(axis=1)
@@ -96,18 +152,28 @@ class AudioLevelFollower(QObject):
         self.audio = data
         self.sample_rate = int(sample_rate)
         self.start_time = time.monotonic()
+        self.target_panel = target_panel
 
         self.timer.start(16)
 
     def stop(self) -> None:
         self.timer.stop()
+
+        if self.target_panel is not None:
+            self.target_panel.set_audio_level(0.0)
+
         self.audio = None
         self.sample_rate = None
         self.start_time = None
-        self.orb_widget.set_audio_level(0.0)
+        self.target_panel = None
 
     def _update_level(self) -> None:
-        if self.audio is None or self.sample_rate is None or self.start_time is None:
+        if (
+            self.audio is None
+            or self.sample_rate is None
+            or self.start_time is None
+            or self.target_panel is None
+        ):
             return
 
         elapsed = time.monotonic() - self.start_time
@@ -123,377 +189,797 @@ class AudioLevelFollower(QObject):
             return
 
         chunk = self.audio[start:end]
-
         rms = float(np.sqrt(np.mean(chunk * chunk) + 1e-12))
 
-        # Visual gain. Increase this if the orb does not move enough.
-        level = min(1.0, rms * 10.0)
+        level = min(1.0, rms * 11.0)
 
-        # Keep a small visible motion while speaking.
         if level > 0.01:
-            level = max(level, 0.12)
+            level = max(level, 0.14)
 
-        self.orb_widget.set_audio_level(level)
-
-
-class InfoCard(QFrame):
-    def __init__(self, title: str, value: str = "", accent: str = "#18d4f5"):
-        super().__init__()
-
-        self.accent = accent
-
-        self.setStyleSheet(
-            f"""
-            QFrame {{
-                background-color: rgba(255, 255, 255, 0.055);
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 18px;
-            }}
-            """
-        )
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(8)
-
-        self.title_label = QLabel(title)
-        self.title_label.setStyleSheet(
-            f"""
-            font-size: 12px;
-            font-weight: 900;
-            color: {accent};
-            letter-spacing: 1.5px;
-            """
-        )
-
-        self.value_label = QLabel(value)
-        self.value_label.setWordWrap(True)
-        self.value_label.setStyleSheet(
-            """
-            font-size: 16px;
-            font-weight: 800;
-            color: white;
-            """
-        )
-
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.value_label)
-
-    def set_value(self, value: str) -> None:
-        self.value_label.setText(value)
+        self.target_panel.set_audio_level(level)
 
 
-class DiscussionPage(QWidget):
-    ROLE_NAMES = {
-        "student": "Bentham-Bot / LEFT",
-        "professor": "Korsgaard-Bot / CENTER",
-        "moderator": "Aquinas-Bot / RIGHT",
-    }
-
-    ROLE_SHORT_NAMES = {
-        "student": "Bentham-Bot",
-        "professor": "Korsgaard-Bot",
-        "moderator": "Aquinas-Bot",
-    }
-
-    ROLE_POSITIONS = {
-        "student": "Left",
-        "professor": "Center",
-        "moderator": "Right",
-    }
-
-    ROLE_COLORS = {
-        "student": "#5dade2",
-        "professor": "#bb8fce",
-        "moderator": "#58d68d",
-    }
-
-    ROLE_DESCRIPTIONS = {
-        "student": "Consequences / Utility",
-        "professor": "Duty / Respect",
-        "moderator": "Virtue / Purpose",
-    }
+class FuturisticBackground(QWidget):
+    """Full-screen dark sci-fi background."""
 
     def __init__(self):
         super().__init__()
 
+        self.phase = 0.0
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._tick)
+        self.timer.start(33)
+
+    def _tick(self) -> None:
+        self.phase += 0.015
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        w = self.width()
+        h = self.height()
+
+        bg = QLinearGradient(0, 0, w, h)
+        bg.setColorAt(0.0, QColor("#030612"))
+        bg.setColorAt(0.45, QColor("#071021"))
+        bg.setColorAt(1.0, QColor("#02030a"))
+        painter.fillRect(self.rect(), bg)
+
+        glow = QRadialGradient(w / 2, h * 0.45, min(w, h) * 0.74)
+        glow.setColorAt(0.0, QColor(0, 220, 255, 35))
+        glow.setColorAt(0.35, QColor(130, 70, 255, 20))
+        glow.setColorAt(1.0, QColor(0, 0, 0, 0))
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(glow)
+        painter.drawEllipse(
+            int(w / 2 - min(w, h) * 0.74),
+            int(h * 0.45 - min(w, h) * 0.74),
+            int(min(w, h) * 1.48),
+            int(min(w, h) * 1.48),
+        )
+
+        painter.setPen(QPen(QColor(0, 220, 255, 18), 1))
+
+        grid_gap = 42
+        offset = int((self.phase * 80) % grid_gap)
+
+        for x in range(-grid_gap + offset, w + grid_gap, grid_gap):
+            painter.drawLine(x, 0, x, h)
+
+        for y in range(-grid_gap + offset, h + grid_gap, grid_gap):
+            painter.drawLine(0, y, w, y)
+
+        painter.setPen(QPen(QColor(150, 90, 255, 16), 1))
+
+        for i in range(-h, w, 160):
+            painter.drawLine(i, h, i + h, 0)
+
+        top_glow = QLinearGradient(0, 0, 0, h)
+        top_glow.setColorAt(0.0, QColor(0, 220, 255, 34))
+        top_glow.setColorAt(0.16, QColor(0, 0, 0, 0))
+        top_glow.setColorAt(0.84, QColor(0, 0, 0, 0))
+        top_glow.setColorAt(1.0, QColor(130, 70, 255, 28))
+
+        painter.fillRect(self.rect(), top_glow)
+
+
+class AvatarWidget(QWidget):
+    def __init__(
+        self,
+        role: str,
+        color: str,
+        label: str,
+        image_path: str | Path | None = None,
+    ):
+        super().__init__()
+
+        self.role = role
+        self.color = QColor(color)
+        self.label = label
+        self.phase = 0.0
+        self.active = False
+
+        self.level = 0.0
+        self.display_level = 0.0
+
+        self.image_path = Path(image_path) if image_path is not None else None
+        self.pixmap = (
+            QPixmap(str(self.image_path))
+            if self.image_path is not None
+            else QPixmap()
+        )
+
+        if self.image_path is not None and self.pixmap.isNull():
+            print(f"  WARNING: Avatar image could not be loaded: {self.image_path}")
+
+        # 写真の大きさはほぼそのまま。
+        # 表示枠だけ広くして、光源とリングが欠けないようにする。
+        self.setFixedSize(230, 230)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._tick)
+        self.timer.start(16)
+
+    def set_active(self, active: bool) -> None:
+        self.active = active
+        self.update()
+
+    def set_level(self, level: float) -> None:
+        self.level = max(0.0, min(1.0, level))
+        self.update()
+
+    def _tick(self) -> None:
+        self.phase += 0.055
+        self.display_level += (self.level - self.display_level) * 0.24
+
+        if not self.active and self.level > 0:
+            self.level *= 0.88
+
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        w = self.width()
+        h = self.height()
+        cx = w / 2
+        cy = h / 2
+
+        qcolor = self.color
+
+        # 写真本体は小さめ固定。
+        # 音声で少しだけ膨らむ。
+        base_radius = 50
+        pulse = self.display_level * 5
+        photo_radius = base_radius + pulse
+
+        ring_alpha = 145 if self.active else 45
+        ring_alpha += int(self.display_level * 80)
+        ring_alpha = min(ring_alpha, 230)
+
+        glow_alpha = 76 if self.active else 24
+        glow_alpha += int(self.display_level * 115)
+        glow_alpha = min(glow_alpha, 220)
+
+        # 重要:
+        # 以前の 2.65 は広すぎて表示枠から欠ける。
+        # 1.78 なら光源は広がるが、230x230 の中に収まる。
+        glow_scale = 1.78
+
+        glow = QRadialGradient(cx, cy, photo_radius * glow_scale)
+        glow.setColorAt(
+            0.0,
+            QColor(qcolor.red(), qcolor.green(), qcolor.blue(), glow_alpha),
+        )
+        glow.setColorAt(
+            0.58,
+            QColor(
+                qcolor.red(),
+                qcolor.green(),
+                qcolor.blue(),
+                40 if self.active else 14,
+            ),
+        )
+        glow.setColorAt(1.0, QColor(0, 0, 0, 0))
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(glow)
+        painter.drawEllipse(
+            QRectF(
+                cx - photo_radius * glow_scale,
+                cy - photo_radius * glow_scale,
+                photo_radius * glow_scale * 2,
+                photo_radius * glow_scale * 2,
+            )
+        )
+
+        # Animated rings
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        for i, scale in enumerate([1.12, 1.32, 1.55]):
+            rr = (
+                photo_radius * scale
+                + np.sin(self.phase * 2 + i) * 2
+                + self.display_level * 6
+            )
+            alpha = max(18, ring_alpha - i * 44)
+
+            painter.setPen(
+                QPen(
+                    QColor(
+                        qcolor.red(),
+                        qcolor.green(),
+                        qcolor.blue(),
+                        alpha,
+                    ),
+                    2 if self.active and i == 0 else 1,
+                )
+            )
+            painter.drawEllipse(QRectF(cx - rr, cy - rr, rr * 2, rr * 2))
+
+        # Circular photo
+        circle_path = QPainterPath()
+        circle_path.addEllipse(
+            QRectF(
+                cx - photo_radius,
+                cy - photo_radius,
+                photo_radius * 2,
+                photo_radius * 2,
+            )
+        )
+
+        painter.save()
+        painter.setClipPath(circle_path)
+
+        if not self.pixmap.isNull():
+            scaled = self.pixmap.scaled(
+                int(photo_radius * 2),
+                int(photo_radius * 2),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+
+            x = int(cx - scaled.width() / 2)
+            y = int(cy - scaled.height() / 2)
+
+            painter.drawPixmap(x, y, scaled)
+        else:
+            fallback = QRadialGradient(cx, cy, photo_radius)
+            fallback.setColorAt(0.0, QColor(255, 255, 255, 210))
+            fallback.setColorAt(
+                1.0,
+                QColor(qcolor.red(), qcolor.green(), qcolor.blue(), 60),
+            )
+
+            painter.setBrush(fallback)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(
+                QRectF(
+                    cx - photo_radius,
+                    cy - photo_radius,
+                    photo_radius * 2,
+                    photo_radius * 2,
+                )
+            )
+
+            font = QFont("Arial")
+            font.setPointSize(36)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.setPen(qcolor)
+            painter.drawText(
+                QRectF(
+                    cx - photo_radius,
+                    cy - photo_radius,
+                    photo_radius * 2,
+                    photo_radius * 2,
+                ),
+                Qt.AlignmentFlag.AlignCenter,
+                self.label,
+            )
+
+        painter.restore()
+
+        # Photo border
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(
+            QPen(
+                QColor(qcolor.red(), qcolor.green(), qcolor.blue(), 220),
+                2,
+            )
+        )
+        painter.drawEllipse(
+            QRectF(
+                cx - photo_radius,
+                cy - photo_radius,
+                photo_radius * 2,
+                photo_radius * 2,
+            )
+        )
+
+        # Small badge
+        badge_radius = 17
+        badge_x = w - 64
+        badge_y = h - 64
+
+        painter.setBrush(QColor(3, 6, 18, 235))
+        painter.setPen(
+            QPen(
+                QColor(qcolor.red(), qcolor.green(), qcolor.blue(), 190),
+                2,
+            )
+        )
+        painter.drawEllipse(
+            QRectF(
+                badge_x,
+                badge_y,
+                badge_radius * 2,
+                badge_radius * 2,
+            )
+        )
+
+        font = QFont("Arial")
+        font.setPointSize(13)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(qcolor)
+        painter.drawText(
+            QRectF(
+                badge_x,
+                badge_y,
+                badge_radius * 2,
+                badge_radius * 2,
+            ),
+            Qt.AlignmentFlag.AlignCenter,
+            self.label,
+        )
+
+
+class QuestionCard(QFrame):
+    def __init__(self):
+        super().__init__()
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(120)
+        self.setMaximumHeight(135)
+
+        _add_shadow(self, blur=36, y_offset=8, alpha=75, color="#00d9ff")
+
         self.setStyleSheet(
             """
-            QWidget {
-                background-color: #14152f;
-                color: white;
-                font-family: Arial;
+            QFrame {
+                background-color: rgba(5, 14, 31, 225);
+                border: 2px solid rgba(0, 220, 255, 150);
+                border-radius: 26px;
             }
             """
         )
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(42, 26, 42, 30)
-        root.setSpacing(18)
+        root.setContentsMargins(40, 12, 40, 12)
+        root.setSpacing(0)
 
-        # ── Top bar ─────────────────────────────────────────────
-
-        top_bar = QHBoxLayout()
-        top_bar.setSpacing(16)
-
-        self.app_title_label = QLabel("AI Ethics Assistance")
-        self.app_title_label.setStyleSheet(
+        self.topic_label = QLabel("")
+        self.topic_label.setWordWrap(True)
+        self.topic_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.topic_label.setStyleSheet(
             """
-            font-size: 20px;
-            font-weight: 900;
-            color: #18d4f5;
-            """
-        )
-
-        self.session_label = QLabel("Video Discussion")
-        self.session_label.setStyleSheet(
-            """
-            font-size: 15px;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.75);
-            """
-        )
-
-        top_bar.addWidget(self.app_title_label)
-        top_bar.addSpacing(20)
-        top_bar.addWidget(self.session_label)
-        top_bar.addStretch(1)
-
-        self.status_label = QLabel("READY")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.status_label.setStyleSheet(
-            """
-            font-size: 13px;
-            font-weight: 900;
-            color: #f7dc6f;
-            letter-spacing: 1.4px;
-            """
-        )
-
-        top_bar.addWidget(self.status_label)
-        root.addLayout(top_bar)
-
-        divider = QFrame()
-        divider.setFixedHeight(1)
-        divider.setStyleSheet("background-color: rgba(255,255,255,0.08);")
-        root.addWidget(divider)
-
-        # ── Main 3-column layout ────────────────────────────────
-
-        main = QHBoxLayout()
-        main.setSpacing(28)
-        root.addLayout(main, stretch=1)
-
-        # Left column
-        left_col = QVBoxLayout()
-        left_col.setSpacing(16)
-
-        left_title = QLabel("Robot Perspectives")
-        left_title.setStyleSheet(
-            """
-            font-size: 18px;
-            font-weight: 900;
-            color: white;
-            """
-        )
-
-        left_col.addWidget(left_title)
-
-        self.student_card = InfoCard(
-            "BENTHAM",
-            "Consequences",
-            self.ROLE_COLORS["student"],
-        )
-        self.professor_card = InfoCard(
-            "KORSGAARD",
-            "Duty and respect",
-            self.ROLE_COLORS["professor"],
-        )
-        self.moderator_card = InfoCard(
-            "AQUINAS",
-            "Virtue and purpose",
-            self.ROLE_COLORS["moderator"],
-        )
-
-        left_col.addWidget(self.student_card)
-        left_col.addWidget(self.professor_card)
-        left_col.addWidget(self.moderator_card)
-        left_col.addStretch(1)
-
-        left_panel = QFrame()
-        left_panel.setLayout(left_col)
-        left_panel.setFixedWidth(285)
-        left_panel.setStyleSheet("background: transparent;")
-
-        main.addWidget(left_panel)
-
-        # Center column
-        center_col = QVBoxLayout()
-        center_col.setSpacing(12)
-
-        self.title_label = QLabel("Discussion")
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title_label.setStyleSheet(
-            """
-            font-size: 31px;
-            font-weight: 900;
-            color: white;
-            """
-        )
-
-        self.question_label = QLabel("")
-        self.question_label.setWordWrap(True)
-        self.question_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.question_label.setStyleSheet(
-            """
-            font-size: 23px;
-            font-weight: 800;
-            line-height: 1.35;
-            color: #f7dc6f;
-            padding: 16px 22px;
-            border: 1px solid rgba(247, 220, 111, 0.35);
-            border-radius: 20px;
-            background-color: rgba(0,0,0,0.20);
-            """
-        )
-
-        self.audio_orb = AudioOrbWidget()
-        self.audio_orb.setMinimumHeight(430)
-        self.audio_orb.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding,
-        )
-
-        self.audio_follower = AudioLevelFollower(self.audio_orb)
-
-        self.current_speaker_label = QLabel("")
-        self.current_speaker_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.current_speaker_label.setStyleSheet(
-            """
-            font-size: 27px;
-            font-weight: 900;
-            color: white;
-            """
-        )
-
-        self.current_text_label = QLabel("")
-        self.current_text_label.setWordWrap(True)
-        self.current_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.current_text_label.setMinimumHeight(145)
-        self.current_text_label.setStyleSheet(
-            """
-            font-size: 31px;
-            font-weight: 900;
-            line-height: 1.35;
-            color: white;
-            padding: 22px 28px;
-            border: 2px solid rgba(255,255,255,0.35);
-            border-radius: 24px;
-            background-color: rgba(0,0,0,0.45);
-            """
-        )
-
-        center_col.addWidget(self.title_label)
-        center_col.addWidget(self.question_label)
-        center_col.addWidget(self.audio_orb, stretch=1)
-        center_col.addWidget(self.current_speaker_label)
-        center_col.addWidget(self.current_text_label)
-
-        center_panel = QFrame()
-        center_panel.setLayout(center_col)
-        center_panel.setStyleSheet("background: transparent;")
-
-        main.addWidget(center_panel, stretch=1)
-
-        # Right column
-        right_col = QVBoxLayout()
-        right_col.setSpacing(16)
-
-        right_title = QLabel("Current Turn")
-        right_title.setStyleSheet(
-            """
-            font-size: 18px;
-            font-weight: 900;
-            color: white;
-            """
-        )
-        right_col.addWidget(right_title)
-
-        self.current_role_card = InfoCard("SPEAKER", "None", "#18d4f5")
-        self.current_position_card = InfoCard("POSITION", "-", "#18d4f5")
-        self.current_view_card = InfoCard("PERSPECTIVE", "-", "#18d4f5")
-
-        right_col.addWidget(self.current_role_card)
-        right_col.addWidget(self.current_position_card)
-        right_col.addWidget(self.current_view_card)
-
-        history_title = QLabel("Recent Lines")
-        history_title.setStyleSheet(
-            """
-            font-size: 17px;
-            font-weight: 900;
-            color: white;
-            margin-top: 10px;
-            """
-        )
-
-        right_col.addWidget(history_title)
-
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFixedHeight(280)
-        self.scroll_area.setStyleSheet(
-            """
-            QScrollArea {
+            QLabel {
+                color: #eaf6ff;
+                background: transparent;
                 border: none;
+                font-size: 24px;
+                font-weight: 900;
+                line-height: 1.3;
+            }
+            """
+        )
+
+        root.addWidget(self.topic_label)
+
+    def set_question(self, topic: str) -> None:
+        self.topic_label.setText(topic)
+
+
+class CurrentSpeechPanel(QFrame):
+    def __init__(self):
+        super().__init__()
+
+        self.color = QColor("#00d9ff")
+        self.full_text = ""
+        self.visible_count = 0
+
+        self.type_timer = QTimer(self)
+        self.type_timer.timeout.connect(self._type_next)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(360)
+        self.setMaximumHeight(385)
+
+        _add_shadow(self, blur=42, y_offset=10, alpha=80, color="#00d9ff")
+
+        self.setStyleSheet(
+            """
+            QFrame {
+                background-color: rgba(5, 14, 31, 235);
+                border: 2px solid rgba(0, 220, 255, 145);
+                border-radius: 28px;
+            }
+            """
+        )
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(30, 20, 30, 22)
+        root.setSpacing(10)
+
+        self.speaker_label = QLabel("")
+        self.speaker_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.speaker_label.setStyleSheet(
+            """
+            QLabel {
+                color: #55e7ff;
+                background: transparent;
+                border: none;
+                font-size: 20px;
+                font-weight: 900;
+                letter-spacing: 3px;
+            }
+            """
+        )
+
+        self.text_label = QLabel("")
+        self.text_label.setWordWrap(True)
+        self.text_label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
+        self.text_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
+        self.text_label.setStyleSheet(
+            """
+            QLabel {
+                color: #eaf6ff;
+                background: transparent;
+                border: none;
+                font-size: 22px;
+                font-weight: 650;
+                line-height: 1.45;
+                padding: 4px 8px;
+            }
+            """
+        )
+
+        root.addWidget(self.speaker_label)
+        root.addWidget(self.text_label, 1)
+
+    def set_speaker_style(self, speaker_name: str, color: str) -> None:
+        self.color = QColor(color)
+
+        self.speaker_label.setText(speaker_name.upper())
+        self.speaker_label.setStyleSheet(
+            f"""
+            QLabel {{
+                color: {color};
+                background: transparent;
+                border: none;
+                font-size: 20px;
+                font-weight: 900;
+                letter-spacing: 3px;
+            }}
+            """
+        )
+
+        qcolor = QColor(color)
+
+        self.setStyleSheet(
+            f"""
+            QFrame {{
+                background-color: rgba(5, 14, 31, 238);
+                border: 2px solid rgba(
+                    {qcolor.red()},
+                    {qcolor.green()},
+                    {qcolor.blue()},
+                    170
+                );
+                border-radius: 28px;
+            }}
+            """
+        )
+
+    def set_text(
+        self,
+        speaker_name: str,
+        text: str,
+        color: str,
+        duration_secs: float | None = None,
+    ) -> None:
+        self.type_timer.stop()
+
+        self.set_speaker_style(speaker_name, color)
+
+        self.full_text = text.strip()
+        self.visible_count = 0
+
+        if not self.full_text:
+            self.text_label.setText("")
+            return
+
+        self.words = self.full_text.split()
+        self.visible_word_count = 0
+
+        if duration_secs is not None and duration_secs > 0:
+            total_ms = max(700, int(duration_secs * 1000 * 0.88))
+            interval_ms = max(120, total_ms // max(1, len(self.words)))
+        else:
+            interval_ms = 140
+
+        self.text_label.setText("“ ”")
+
+        self.type_timer.start(interval_ms)
+
+    def _type_next(self) -> None:
+        if not hasattr(self, "words"):
+            self.type_timer.stop()
+            self.text_label.setText(f"“ {self.full_text} ”")
+            return
+
+        if self.visible_word_count >= len(self.words):
+            self.type_timer.stop()
+            self.text_label.setText(f"“ {self.full_text} ”")
+            return
+
+        words_per_tick = 2
+        self.visible_word_count = min(
+            len(self.words),
+            self.visible_word_count + words_per_tick,
+        )
+
+        visible_text = " ".join(self.words[: self.visible_word_count])
+        self.text_label.setText(f"“ {visible_text}▌ ”")
+
+    def finish_typing(self) -> None:
+        self.type_timer.stop()
+
+        if self.full_text:
+            self.text_label.setText(f"“ {self.full_text} ”")
+
+    def clear(self) -> None:
+        self.type_timer.stop()
+        self.full_text = ""
+        self.visible_count = 0
+        self.speaker_label.setText("")
+        self.text_label.setText("")
+        
+
+class SpeakerAvatarPanel(QFrame):
+    def __init__(
+        self,
+        role: str,
+        name: str,
+        color: str,
+        avatar_label: str,
+        image_path: str | Path | None = None,
+    ):
+        super().__init__()
+
+        self.role = role
+        self.name = name
+        self.color = color
+        self.active = False
+        self.audio_level = 0.0
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(270)
+        self.setMaximumHeight(290)
+        self.setMinimumWidth(0)
+
+        _add_shadow(self, blur=28, y_offset=8, alpha=55, color=color)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 10, 20, 10)
+        root.setSpacing(2)
+
+        self.name_label = QLabel(name.upper())
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setStyleSheet(
+            f"""
+            QLabel {{
+                color: {color};
+                background: transparent;
+                border: none;
+                font-size: 14px;
+                font-weight: 900;
+                letter-spacing: 2px;
+            }}
+            """
+        )
+
+        self.avatar = AvatarWidget(
+            role=role,
+            color=color,
+            label=avatar_label,
+            image_path=image_path,
+        )
+
+        root.addWidget(self.name_label)
+        root.addWidget(self.avatar, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.set_active(False)
+
+    def set_active(self, active: bool) -> None:
+        self.active = active
+        self.avatar.set_active(active)
+
+        qcolor = QColor(self.color)
+
+        if active:
+            self.setStyleSheet(
+                f"""
+                QFrame {{
+                    background-color: rgba(6, 18, 38, 230);
+                    border: 2px solid rgba(
+                        {qcolor.red()},
+                        {qcolor.green()},
+                        {qcolor.blue()},
+                        210
+                    );
+                    border-radius: 24px;
+                }}
+                """
+            )
+            self.name_label.setStyleSheet(
+                f"""
+                QLabel {{
+                    color: {self.color};
+                    background: transparent;
+                    border: none;
+                    font-size: 15px;
+                    font-weight: 900;
+                    letter-spacing: 2px;
+                }}
+                """
+            )
+        else:
+            self.setStyleSheet(
+                """
+                QFrame {
+                    background-color: rgba(5, 11, 26, 160);
+                    border: 1px solid rgba(120, 160, 210, 38);
+                    border-radius: 24px;
+                }
+                """
+            )
+            self.name_label.setStyleSheet(
+                f"""
+                QLabel {{
+                    color: {self.color};
+                    background: transparent;
+                    border: none;
+                    font-size: 14px;
+                    font-weight: 900;
+                    letter-spacing: 2px;
+                    opacity: 0.7;
+                }}
+                """
+            )
+
+        if not active:
+            self.set_audio_level(0.0)
+
+    def set_audio_level(self, level: float) -> None:
+        self.audio_level = max(0.0, min(1.0, level))
+        self.avatar.set_level(self.audio_level)
+
+
+class DiscussionPage(FuturisticBackground):
+    ROLE_NAMES = {
+        "student": "Bentham-Bot",
+        "professor": "Korsgaard-Bot",
+        "moderator": "Aquinas-Bot",
+    }
+
+    ROLE_COLORS = {
+        "student": "#00d9ff",
+        "professor": "#50ff9a",
+        "moderator": "#a879ff",
+    }
+
+    ROLE_BADGES = {
+        "student": "B",
+        "professor": "K",
+        "moderator": "A",
+    }
+
+    ROLE_IMAGES = {
+        "student": PICTURE_DIR / "Bentham.png",
+        "professor": PICTURE_DIR / "korsgaard.jpg",
+        "moderator": PICTURE_DIR / "Aquinas.jpg",
+    }
+
+    def __init__(self):
+        super().__init__()
+
+        self.panels: dict[str, SpeakerAvatarPanel] = {}
+        self.audio_follower = AudioLevelFollower()
+
+        self.setObjectName("discussionPage")
+        self.setAutoFillBackground(False)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(52, 18, 52, 20)
+        root.setSpacing(14)
+
+        self.top_bar = QHBoxLayout()
+        self.top_bar.setSpacing(12)
+
+        self.app_label = QLabel("AI ETHICS DISCUSSION")
+        self.app_label.setStyleSheet(
+            """
+            QLabel {
+                color: #55e7ff;
+                font-size: 15px;
+                font-weight: 900;
+                letter-spacing: 2px;
                 background: transparent;
             }
-            QScrollBar:vertical {
-                background: rgba(255,255,255,0.05);
-                width: 8px;
-                border-radius: 4px;
-            }
-            QScrollBar::handle:vertical {
-                background: rgba(24, 212, 245, 0.55);
-                border-radius: 4px;
+            """
+        )
+
+        self.system_label = QLabel("LIVE MULTI-AGENT ETHICS PANEL")
+        self.system_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.system_label.setStyleSheet(
+            """
+            QLabel {
+                color: rgba(219, 234, 254, 0.42);
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 2px;
+                background: transparent;
             }
             """
         )
 
-        self.chat_container = QWidget()
-        self.chat_layout = QVBoxLayout(self.chat_container)
-        self.chat_layout.setContentsMargins(0, 0, 0, 0)
-        self.chat_layout.setSpacing(10)
-        self.chat_layout.addStretch(1)
+        self.session_label = QLabel("")
+        self.session_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.session_label.setStyleSheet(
+            """
+            QLabel {
+                color: rgba(219, 234, 254, 0.58);
+                font-size: 11px;
+                font-weight: 700;
+                background: transparent;
+            }
+            """
+        )
 
-        self.scroll_area.setWidget(self.chat_container)
-        right_col.addWidget(self.scroll_area)
+        self.top_bar.addWidget(self.app_label)
+        self.top_bar.addStretch(1)
+        self.top_bar.addWidget(self.system_label)
+        self.top_bar.addStretch(1)
+        self.top_bar.addWidget(self.session_label)
 
-        right_col.addStretch(1)
+        root.addLayout(self.top_bar)
 
-        right_panel = QFrame()
-        right_panel.setLayout(right_col)
-        right_panel.setFixedWidth(315)
-        right_panel.setStyleSheet("background: transparent;")
+        self.question_card = QuestionCard()
+        root.addWidget(self.question_card)
 
-        main.addWidget(right_panel)
+        self.current_speech = CurrentSpeechPanel()
+        root.addWidget(self.current_speech)
+
+        self.avatar_row = QHBoxLayout()
+        self.avatar_row.setSpacing(34)
+        self.avatar_row.setContentsMargins(0, 0, 0, 0)
+
+        for role in ["student", "professor", "moderator"]:
+            panel = SpeakerAvatarPanel(
+                role=role,
+                name=self.ROLE_NAMES[role],
+                color=self.ROLE_COLORS[role],
+                avatar_label=self.ROLE_BADGES[role],
+                image_path=self.ROLE_IMAGES[role],
+            )
+            self.panels[role] = panel
+            self.avatar_row.addWidget(panel, 1)
+
+        root.addLayout(self.avatar_row)
+        root.addStretch(0)
 
     def show_discussion(self, title: str, topic: str) -> None:
-        self.title_label.setText(title)
-        self.question_label.setText(topic)
+        self.session_label.setText(title.upper())
+        self.question_card.set_question(topic)
 
-        self.current_speaker_label.setText("")
-        self.current_text_label.setText("")
-
-        self.current_role_card.set_value("None")
-        self.current_position_card.set_value("-")
-        self.current_view_card.set_value("-")
-
-        self.status_label.setText("READY")
+        self.current_speech.clear()
         self.audio_follower.stop()
-        self.audio_orb.stop()
 
-        self._clear_chat()
+        for panel in self.panels.values():
+            panel.set_active(False)
+            panel.set_audio_level(0.0)
 
     def show_subtitle(
         self,
@@ -502,119 +988,41 @@ class DiscussionPage(QWidget):
         turn_number: int | None = None,
         audio_path: str | Path | None = None,
     ) -> None:
-        speaker = self.ROLE_NAMES.get(role, role)
-        short_name = self.ROLE_SHORT_NAMES.get(role, role)
-        position = self.ROLE_POSITIONS.get(role, "-")
-        perspective = self.ROLE_DESCRIPTIONS.get(role, "-")
-        color = self.ROLE_COLORS.get(role, "#ffffff")
+        self.audio_follower.stop()
 
-        if turn_number is not None:
-            speaker_text = f"Turn {turn_number} · {speaker}"
-        else:
-            speaker_text = speaker
+        active_panel = self.panels.get(role)
 
-        self.status_label.setText("SPEAKING")
-        self.current_role_card.set_value(short_name)
-        self.current_position_card.set_value(position)
-        self.current_view_card.set_value(perspective)
+        if active_panel is None:
+            return
 
-        self.audio_orb.set_speaker(speaker)
-        self.audio_orb.set_status("Speaking...")
+        duration_secs = _get_audio_duration_secs(audio_path)
+        speaker_name = self.ROLE_NAMES.get(role, role)
+        color = self.ROLE_COLORS.get(role, "#00d9ff")
+
+        self.current_speech.set_text(
+            speaker_name=speaker_name,
+            text=text,
+            color=color,
+            duration_secs=duration_secs,
+        )
+
+        for panel_role, panel in self.panels.items():
+            panel.set_active(panel_role == role)
 
         if audio_path is not None:
-            self.audio_follower.start(audio_path)
+            self.audio_follower.start(audio_path, active_panel)
         else:
-            # Fallback. This still makes the orb move during speech.
-            self.audio_orb.set_audio_level(0.45)
-
-        self.current_speaker_label.setText(speaker_text)
-        self.current_speaker_label.setStyleSheet(
-            f"""
-            font-size: 27px;
-            font-weight: 900;
-            color: {color};
-            """
-        )
-
-        self.current_text_label.setText(text)
-        self.current_text_label.setStyleSheet(
-            f"""
-            font-size: 31px;
-            font-weight: 900;
-            line-height: 1.35;
-            color: white;
-            padding: 22px 28px;
-            border: 2px solid {color};
-            border-radius: 24px;
-            background-color: rgba(0,0,0,0.45);
-            """
-        )
-
-        self._add_chat_bubble(role, speaker, text)
+            active_panel.set_audio_level(0.45)
 
     def finish_subtitle(self) -> None:
-        self.current_speaker_label.setText("")
-        self.current_text_label.setText("")
-
-        self.current_role_card.set_value("None")
-        self.current_position_card.set_value("-")
-        self.current_view_card.set_value("-")
-
-        self.status_label.setText("READY")
-
         self.audio_follower.stop()
-        self.audio_orb.stop()
+        self.current_speech.finish_typing()
 
-    def _clear_chat(self) -> None:
-        while self.chat_layout.count():
-            item = self.chat_layout.takeAt(0)
-            widget = item.widget()
+        for panel in self.panels.values():
+            panel.set_active(False)
+            panel.set_audio_level(0.0)
 
-            if widget is not None:
-                widget.deleteLater()
 
-        self.chat_layout.addStretch(1)
-
-    def _add_chat_bubble(self, role: str, speaker: str, text: str) -> None:
-        color = self.ROLE_COLORS.get(role, "#ffffff")
-
-        bubble = QLabel()
-        bubble.setWordWrap(True)
-        bubble.setText(f"<b>{speaker}</b><br>{text}")
-        bubble.setStyleSheet(
-            f"""
-            QLabel {{
-                font-size: 15px;
-                line-height: 1.35;
-                color: white;
-                padding: 11px 14px;
-                border-radius: 14px;
-                border-left: 7px solid {color};
-                background-color: rgba(255,255,255,0.10);
-            }}
-            """
-        )
-
-        insert_index = max(0, self.chat_layout.count() - 1)
-        self.chat_layout.insertWidget(insert_index, bubble)
-
-        # Keep only last 4 bubbles.
-        widgets = []
-
-        for i in range(self.chat_layout.count()):
-            item = self.chat_layout.itemAt(i)
-            widget = item.widget()
-
-            if widget is not None:
-                widgets.append(widget)
-
-        while len(widgets) > 4:
-            old = widgets.pop(0)
-            self.chat_layout.removeWidget(old)
-            old.deleteLater()
-
-        bar = self.scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
 
 
 class ControlledVideoWindow(QWidget):
@@ -628,27 +1036,43 @@ class ControlledVideoWindow(QWidget):
         self.video_path = Path(video_path)
 
         self.setWindowTitle("Ethics Podcast Video Discussion")
-        self.setStyleSheet("background-color: black;")
+        self.setObjectName("controlledVideoWindow")
+        self.setStyleSheet(
+            """
+            QWidget#controlledVideoWindow {
+                background-color: #02030a;
+            }
+            """
+        )
 
         self.stack = QStackedLayout(self)
 
-        # Page 0: VLC video
         self.video_frame = QFrame()
         self.video_frame.setStyleSheet("background-color: black;")
         self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
         self.video_frame.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         self.stack.addWidget(self.video_frame)
 
-        # Page 1: Discussion UI
         self.discussion_page = DiscussionPage()
         self.stack.addWidget(self.discussion_page)
 
         self.stack.setCurrentWidget(self.video_frame)
+        self.stack.setCurrentWidget(self.video_frame)
+
+        # Black overlay used for fade-out / fade-in transitions.
+        # This avoids showing the desktop between videos or pages.
+        self.fade_overlay = QWidget(self)
+        self.fade_overlay.setStyleSheet("background-color: black;")
+        self.fade_overlay.hide()
+
+        self.fade_effect = QGraphicsOpacityEffect(self.fade_overlay)
+        self.fade_effect.setOpacity(0.0)
+        self.fade_overlay.setGraphicsEffect(self.fade_effect)
 
         self.vlc_instance = vlc.Instance(
             "--no-video-title-show",
             "--quiet",
-            "--avcodec-hw=d3d11va",
+            "--avcodec-hw=none",
         )
 
         self.player = self.vlc_instance.media_player_new()
@@ -657,6 +1081,275 @@ class ControlledVideoWindow(QWidget):
 
     def process_events(self) -> None:
         self.app.processEvents()
+    
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+
+        if hasattr(self, "fade_overlay"):
+            self.fade_overlay.setGeometry(self.rect())
+            self.fade_overlay.raise_()
+
+    async def _fade_overlay(
+        self,
+        start_opacity: float,
+        end_opacity: float,
+        seconds: float,
+    ) -> None:
+        """Fade the black overlay between two opacity values."""
+        seconds = max(0.01, float(seconds))
+
+        self.fade_overlay.setGeometry(self.rect())
+        self.fade_overlay.show()
+        self.fade_overlay.raise_()
+
+        start_time = time.monotonic()
+
+        while True:
+            elapsed = time.monotonic() - start_time
+            t = min(1.0, elapsed / seconds)
+
+            # Smooth ease-in/ease-out.
+            eased = t * t * (3.0 - 2.0 * t)
+
+            opacity = start_opacity + (end_opacity - start_opacity) * eased
+            self.fade_effect.setOpacity(opacity)
+
+            self.process_events()
+
+            if t >= 1.0:
+                break
+
+            await asyncio.sleep(0.016)
+
+        self.fade_effect.setOpacity(end_opacity)
+
+        if end_opacity <= 0.0:
+            self.fade_overlay.hide()
+
+        self.process_events()
+
+    def hold_black_screen(self) -> None:
+        """Show a full black screen immediately.
+
+        Use this before loading or starting a video so the first frame
+        does not flash before fade-in.
+        """
+        self.fade_overlay.setGeometry(self.rect())
+        self.fade_overlay.show()
+        self.fade_overlay.raise_()
+        self.fade_effect.setOpacity(1.0)
+        self.process_events()
+
+    async def fade_to_black(self, seconds: float = 1.0) -> None:
+        """Fade the visible page to black."""
+        current = float(self.fade_effect.opacity())
+        await self._fade_overlay(current, 1.0, seconds)
+
+    def set_video_visual_level(self, level: float) -> None:
+        """Set VLC video brightness/contrast/saturation together.
+
+        level=0.0 means black.
+        level=1.0 means normal.
+        """
+        level = max(0.0, min(1.0, float(level)))
+
+        try:
+            self.player.video_set_adjust_int(
+                vlc.VideoAdjustOption.Enable,
+                1,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Brightness,
+                level,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Contrast,
+                level,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Saturation,
+                level,
+            )
+        except Exception as e:
+            print(f"  WARNING: Could not set VLC video visual level: {e}")
+
+    async def fade_video_in(
+        self,
+        seconds: float = 1.0,
+    ) -> None:
+        """Fade VLC video image from black to normal.
+
+        This changes the actual VLC image.
+        It does not depend on the Qt overlay.
+        """
+        seconds = max(0.01, float(seconds))
+
+        # Qt overlay can block the view if it happens to be above VLC.
+        # Hide it before using VLC image fade.
+        self.fade_effect.setOpacity(0.0)
+        self.fade_overlay.hide()
+
+        # Start from black.
+        self.set_video_visual_level(0.0)
+
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception as e:
+            print(f"  WARNING: Could not restore VLC video audio on load: {e}")
+
+        self.process_events()
+
+        start_time = time.monotonic()
+
+        while True:
+            elapsed = time.monotonic() - start_time
+            t = min(1.0, elapsed / seconds)
+
+            eased = t * t * (3.0 - 2.0 * t)
+
+            self.set_video_visual_level(eased)
+
+            try:
+                self.player.audio_set_mute(False)
+                self.player.audio_set_volume(VIDEO_VOLUME)
+            except Exception:
+                pass
+
+            self.process_events()
+
+            if t >= 1.0:
+                break
+
+            await asyncio.sleep(0.016)
+
+        self.set_video_visual_level(1.0)
+
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception:
+            pass
+
+        self.process_events()
+
+    async def fade_video_out(
+        self,
+        seconds: float = 1.0,
+    ) -> None:
+        """Fade out VLC video image only.
+
+        Do not touch VLC audio here.
+        Video audio should stay controlled by play() / load_video().
+        """
+        seconds = max(0.01, float(seconds))
+
+        # Keep video audio ON.
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception:
+            pass
+
+        # Enable VLC video image adjustment.
+        try:
+            self.player.video_set_adjust_int(
+                vlc.VideoAdjustOption.Enable,
+                1,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Brightness,
+                1.0,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Contrast,
+                1.0,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Saturation,
+                1.0,
+            )
+        except Exception as e:
+            print(f"  WARNING: Could not enable VLC video adjustment: {e}")
+
+        start_time = time.monotonic()
+
+        while True:
+            elapsed = time.monotonic() - start_time
+            t = min(1.0, elapsed / seconds)
+
+            eased = t * t * (3.0 - 2.0 * t)
+            visual = max(0.0, 1.0 - eased)
+
+            try:
+                self.player.video_set_adjust_float(
+                    vlc.VideoAdjustOption.Brightness,
+                    visual,
+                )
+                self.player.video_set_adjust_float(
+                    vlc.VideoAdjustOption.Contrast,
+                    visual,
+                )
+                self.player.video_set_adjust_float(
+                    vlc.VideoAdjustOption.Saturation,
+                    visual,
+                )
+
+                # Important:
+                # Keep audio alive during fade.
+                self.player.audio_set_mute(False)
+                self.player.audio_set_volume(VIDEO_VOLUME)
+
+            except Exception:
+                pass
+
+            self.process_events()
+
+            if t >= 1.0:
+                break
+
+            await asyncio.sleep(0.016)
+
+        # End on black visually, but do NOT set audio volume to 0.
+        try:
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Brightness,
+                0.0,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Contrast,
+                0.0,
+            )
+            self.player.video_set_adjust_float(
+                vlc.VideoAdjustOption.Saturation,
+                0.0,
+            )
+
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+
+        except Exception:
+            pass
+
+        self.fade_overlay.setGeometry(self.rect())
+        self.fade_overlay.show()
+        self.fade_overlay.raise_()
+        self.fade_effect.setOpacity(1.0)
+
+        self.process_events()
+
+    async def fade_from_black(self, seconds: float = 1.0) -> None:
+        """Fade from black to the visible page."""
+        current = float(self.fade_effect.opacity())
+
+        if current <= 0.0:
+            self.fade_overlay.setGeometry(self.rect())
+            self.fade_overlay.show()
+            self.fade_overlay.raise_()
+            self.fade_effect.setOpacity(1.0)
+            current = 1.0
+
+        await self._fade_overlay(current, 0.0, seconds)
 
     async def pump_events_forever(self, stop: asyncio.Event) -> None:
         while not stop.is_set():
@@ -668,8 +1361,11 @@ class ControlledVideoWindow(QWidget):
 
         print(f"  Loading video into embedded VLC player: {self.video_path}")
 
+        # Keep the screen black while changing videos.
+        self.hold_black_screen()
+
         self.stack.setCurrentWidget(self.video_frame)
-        self.process_events()
+        self.hold_black_screen()
 
         try:
             self.player.stop()
@@ -681,8 +1377,16 @@ class ControlledVideoWindow(QWidget):
 
         hwnd = int(self.video_frame.winId())
         self.player.set_hwnd(hwnd)
+        
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception as e:
+            print(f"  WARNING: Could not restore VLC video audio on load: {e}")
 
-        self.player.audio_set_volume(VIDEO_VOLUME)
+        # Prepare the VLC image as black.
+        # fade_video_in() will brighten it after play().
+        self.set_video_visual_level(0.0)
 
         self.process_events()
 
@@ -699,8 +1403,25 @@ class ControlledVideoWindow(QWidget):
         hwnd = int(self.video_frame.winId())
         self.player.set_hwnd(hwnd)
 
-        self.player.audio_set_volume(VIDEO_VOLUME)
+        # Start the VLC image from black.
+        # fade_video_in() will brighten it later.
+        self.set_video_visual_level(0.0)
+
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception as e:
+            print(f"  WARNING: Could not restore VLC video audio before play: {e}")
+
         self.player.play()
+
+        # VLC may ignore audio settings before play starts.
+        # Set it again immediately after play.
+        try:
+            self.player.audio_set_mute(False)
+            self.player.audio_set_volume(VIDEO_VOLUME)
+        except Exception as e:
+            print(f"  WARNING: Could not restore VLC video audio after play: {e}")
 
         self.process_events()
 
@@ -736,6 +1457,45 @@ class ControlledVideoWindow(QWidget):
 
         self.process_events()
 
+    async def show_discussion_with_fade_in(
+        self,
+        title: str,
+        topic: str,
+        fade_seconds: float = 1.0,
+    ) -> None:
+        """Switch to discussion page while screen is already black, then fade in."""
+        print("  Showing discussion page with fade-in:")
+        print("  Title:", title)
+        print("  Topic:", topic)
+
+        # Important:
+        # Make sure the black overlay is fully visible BEFORE changing pages.
+        self.fade_overlay.setGeometry(self.rect())
+        self.fade_overlay.show()
+        self.fade_overlay.raise_()
+        self.fade_effect.setOpacity(1.0)
+        self.process_events()
+
+        try:
+            self.player.stop()
+        except Exception:
+            pass
+
+        self.discussion_page.show_discussion(title=title, topic=topic)
+        self.stack.setCurrentWidget(self.discussion_page)
+
+        # Important:
+        # After switching pages, immediately raise the overlay again
+        # before processing events. This prevents the discussion screen
+        # from flashing for one frame.
+        self.fade_overlay.setGeometry(self.rect())
+        self.fade_overlay.show()
+        self.fade_overlay.raise_()
+        self.fade_effect.setOpacity(1.0)
+        self.process_events()
+
+        await self.fade_from_black(fade_seconds)
+
     def hide_discussion(self) -> None:
         self.stack.setCurrentWidget(self.video_frame)
         self.process_events()
@@ -762,8 +1522,13 @@ class ControlledVideoWindow(QWidget):
         self.discussion_page.finish_subtitle()
         self.process_events()
 
-    async def wait_until_near_end_and_pause(self) -> None:
-        print("  Waiting until video reaches the end...")
+    async def wait_until_end_with_fade_out(self, fade_seconds: float = 1.0) -> None:
+        """Fade out during the final part of the video, then wait for the real end.
+
+        This does not rewind.
+        This does not pause near the end.
+        """
+        print("  Waiting until video reaches fade-out point...")
 
         duration_ms = 0
 
@@ -780,22 +1545,27 @@ class ControlledVideoWindow(QWidget):
             print("  WARNING: Could not read video length.")
             print("  Using 60 second fallback wait.")
             await self._sleep_with_events(60)
-            self.pause()
+            await self.fade_video_out(fade_seconds)
             return
 
         print(f"  Video length: {duration_ms / 1000:.1f} seconds")
+
+        fade_ms = int(fade_seconds * 1000)
+        fade_start_ms = max(0, duration_ms - fade_ms- 500)
 
         max_wait_seconds = (duration_ms / 1000) + 10
         start_time = time.monotonic()
 
         last_position_ms = -1
         stuck_count = 0
+        fade_started = False
 
         while True:
             self.process_events()
 
             current_ms = self.player.get_time()
             elapsed = time.monotonic() - start_time
+            state = self.player.get_state()
 
             key = _read_arrow_key_windows()
 
@@ -809,13 +1579,28 @@ class ControlledVideoWindow(QWidget):
                 self.player.set_time(int(new_time))
                 print("  Rewound 10 seconds.")
 
-            if elapsed > max_wait_seconds:
-                print("  WARNING: Video wait timed out.")
-                print("  Moving to 4 seconds before the end and pausing.")
+            # Start fade-out BEFORE the video ends.
+            # This prevents the VLC final black frame from flashing first.
+            if not fade_started and current_ms >= fade_start_ms:
+                fade_started = True
+                print("  Starting video fade-out near the end.")
+
+                await self.fade_video_out(fade_seconds)
+
+                # Keep waiting under black until VLC actually reaches the end.
+                continue
+
+            if state == vlc.State.Ended:
+                print("  Video ended by VLC state.")
                 break
 
-            if current_ms >= duration_ms - 500:
+            if current_ms >= duration_ms - 150:
                 print("  Video reached the end by time check.")
+                break
+
+            if elapsed > max_wait_seconds:
+                print("  WARNING: Video wait timed out.")
+                print("  Fading out and moving on.")
                 break
 
             if current_ms == last_position_ms:
@@ -824,32 +1609,23 @@ class ControlledVideoWindow(QWidget):
                 stuck_count = 0
                 last_position_ms = current_ms
 
-            if stuck_count >= 75:
+            if stuck_count >= 100:
                 print("  WARNING: Video playback time appears stuck.")
-                print("  Moving to 4 seconds before the end and pausing.")
+                print("  Fading out and moving on.")
                 break
 
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.05)
 
-        rewind_ms = 4000
-        rewind_position_ms = max(0, duration_ms - rewind_ms)
+        # If the video ended before fade started, still make screen black.
+        if not fade_started:
+            await self.fade_video_out(fade_seconds)
+        else:
+            self.fade_overlay.setGeometry(self.rect())
+            self.fade_overlay.show()
+            self.fade_overlay.raise_()
+            self.fade_effect.setOpacity(1.0)
+            self.process_events()
 
-        self.pause()
-        await self._sleep_with_events(0.2)
-
-        self.player.set_time(int(rewind_position_ms))
-        await self._sleep_with_events(0.5)
-
-        self.pause()
-        await self._sleep_with_events(0.2)
-
-        actual_ms = self.player.get_time()
-
-        print(
-            f"  Video rewound to 4 seconds before the end and paused. "
-            f"Target={rewind_position_ms / 1000:.1f}s, "
-            f"Actual={actual_ms / 1000:.1f}s"
-        )
 
     async def _sleep_with_events(self, seconds: float) -> None:
         end_time = time.monotonic() + seconds

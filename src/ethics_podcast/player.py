@@ -309,8 +309,8 @@ async def _replay_tool_calls(
 
         # Avoid motion collision at the start of speech.
         # The speaker is still moving into speaking-ready / speaker pose.
-        if name in ("play_emotion", "dance") and target_time < 0.1:
-            target_time = 0.1
+        if name in ("play_emotion", "dance") and target_time < 0.0:
+            target_time = 0.0
 
         while not stop.is_set():
             elapsed = time.monotonic() - t_start
@@ -340,14 +340,14 @@ async def _setup_listener(robot: RobotController, look_yaw: float) -> None:
     robot.queue_power_off_pose(duration=0.8)
 
 async def _setup_listeners(listeners: list[tuple[RobotController, float]]) -> None:
-    """Set all non-speaking robots to look toward the current speaker."""
-    tasks = []
+    """Set all non-speaking robots to power-off-like idle pose.
 
+    Commands are staggered to avoid sending pose commands to multiple robots
+    at the exact same moment.
+    """
     for robot, look_yaw in listeners:
-        tasks.append(_setup_listener(robot, look_yaw))
-
-    if tasks:
-        await asyncio.gather(*tasks)
+        robot.queue_power_off_pose(duration=0.8)
+        await asyncio.sleep(0.08)
 
 
 async def _play_turn(
@@ -382,11 +382,10 @@ async def _play_turn(
     for listener, _ in listeners:
         listener.clear_moves()
 
-    for listener, _ in listeners:
-        listener.clear_moves()
-
     # Speaker returns to normal speaking-ready pose first.
     speaker.queue_speaking_ready_pose(duration=0.48)
+
+    await asyncio.sleep(0.08)
 
     # Non-speaking robots go to power-off-like pose.
     await _setup_listeners(listeners)

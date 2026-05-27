@@ -447,13 +447,20 @@ async def run_video_discussion_loop(
 
             video_player.play()
 
-            await video_player.wait_until_near_end_and_pause()
+            # Fade in the actual VLC video image.
+            await video_player.fade_video_in(1.2)
+            
+            # Let the video play until the real end.
+            # Then fade the video screen to black.
+            await video_player.wait_until_end_with_fade_out(2.5)
 
-            video_player.show_discussion(
+            # Show the discussion screen while black,
+            # then fade the discussion screen in.
+            await video_player.show_discussion_with_fade_in(
                 title=title,
                 topic=item["topic"],
+                fade_seconds=1.0,
             )
-
             add_introductions_to_conversation(playback_session)
 
             await run_playback_with_connected_robots(
@@ -468,6 +475,7 @@ async def run_video_discussion_loop(
                 video_window=video_player,
             )
 
+            await video_player.fade_to_black(0.8)
             video_player.hide_discussion()
 
             video_index = (video_index + 1) % len(VIDEO_ITEMS)

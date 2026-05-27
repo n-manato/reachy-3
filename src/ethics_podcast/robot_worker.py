@@ -75,7 +75,7 @@ READY_ANT = NEUTRAL_ANT
 
 # If set_target fails repeatedly, assume the WebSocket connection is dead.
 # The worker exits so robot_controller.py can restart it.
-MAX_SET_TARGET_FAILURES = 8
+MAX_SET_TARGET_FAILURES = 200
 
 
 
@@ -189,6 +189,21 @@ def main() -> None:
     last_err_time = [0.0]
     set_target_failures = [0]
 
+    # ── Debug state for set_target connection loss ─────────────────────────
+    last_command = ["none"]
+    last_command_time = [time.monotonic()]
+    last_visible_command = ["none"]
+    last_visible_command_time = [time.monotonic()]
+
+    last_set_target_ok_time = [time.monotonic()]
+    last_set_target_ok_state = ["none"]
+
+    set_target_total = [0]
+    set_target_ok_total = [0]
+    set_target_fail_total = [0]
+
+    last_loop_state = ["none"]
+
     recorded_moves_cache: list = [None]
 
     def _get_recorded_moves():
@@ -256,6 +271,25 @@ def main() -> None:
         with speech_lock:
             speech_offsets[0] = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
             speech_dirty[0] = True
+            
+    def _safe_move_eval_time(move, t: float) -> float:
+        """Return a safe timestamp for RecordedMove.evaluate().
+
+        Some recorded moves raise an error when evaluated exactly at
+        duration or a tiny bit beyond it. Keep evaluation slightly inside
+        the valid range.
+        """
+        duration = float(getattr(move, "duration", 0.0) or 0.0)
+
+        if duration <= 0.0:
+            return 0.0
+
+        # Stay 1 ms before the end.
+        # This avoids:
+        # "Tried to evaluate recorded move beyond its duration."
+        end_t = max(0.0, duration - 0.001)
+
+        return max(0.0, min(float(t), end_t))
 
     # ── Control loop ───────────────────────────────────────────────────────
 
@@ -272,8 +306,12 @@ def main() -> None:
                 elapsed = t - move_start[0]
 
                 if elapsed >= cm.duration:
+                    finished_move = cm
+                    finished_elapsed = elapsed
+
                     try:
-                        h, a, b = cm.evaluate(cm.duration)
+                        final_t = _safe_move_eval_time(cm, cm.duration)
+                        h, a, b = cm.evaluate(final_t)
 
                         if h is not None:
                             last_primary_head[0] = h.copy()
@@ -284,17 +322,38 @@ def main() -> None:
                         if b is not None:
                             last_primary_body[0] = float(b)
 
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.warning(
+                            "Move final evaluate failed: %s move=%s",
+                            e,
+                            finished_move.__class__.__name__,
+                        )
 
                     current_move[0] = None
                     move_start[0] = None
+
+                    log.info(           
+                        "Move END: %s elapsed=%.3fs duration=%.3fs queue_remaining=%d last_visible_command=%s last_command=%s",
+                        finished_move.__class__.__name__,
+                        finished_elapsed,
+                        getattr(finished_move, "duration", -1.0),
+                        len(move_queue),
+                        last_visible_command[0],    
+                        last_command[0],
+                    )
 
             # 2. Start next queued move.
             if current_move[0] is None and move_queue:
                 current_move[0] = move_queue.popleft()
                 move_start[0] = t
                 breathing_active[0] = False
+                log.info(
+                    "Move START: %s queue_remaining=%d last_visible_command=%s last_command=%s",
+                    current_move[0].__class__.__name__,
+                    len(move_queue),
+                    last_visible_command[0],
+                    last_command[0],
+                )
 
             # 3. Start idle breathing only if enabled.
             if (
@@ -311,7 +370,8 @@ def main() -> None:
                 elapsed = t - move_start[0]
 
                 try:
-                    h, a, b = current_move[0].evaluate(elapsed)
+                    safe_elapsed = _safe_move_eval_time(current_move[0], elapsed)
+                    h, a, b = current_move[0].evaluate(safe_elapsed)
 
                     head = h if h is not None else neutral_head
                     ant = (float(a[0]), float(a[1])) if a is not None else NEUTRAL_ANT
@@ -385,6 +445,23 @@ def main() -> None:
             has_speech_sway = any(v != 0.0 for v in so)
             has_breathing = breathing_active[0]
 
+            state_parts = []
+
+            if has_active_move:
+                state_parts.append("move")
+
+            if has_speech_sway:
+                state_parts.append("sway")
+
+            if has_breathing:
+                state_parts.append("breathing")
+
+            if not state_parts:
+                state_parts.append("idle")
+
+            loop_state = "+".join(state_parts)
+            last_loop_state[0] = loop_state
+
             if not has_active_move and not has_speech_sway and not has_breathing:
                 time.sleep(CONTROL_PERIOD)
                 continue
@@ -392,15 +469,57 @@ def main() -> None:
             # 7. Single set_target call.
             try:
                 robot.set_target(head=head, antennas=ant, body_yaw=body)
+
+                set_target_total[0] += 1
+                set_target_ok_total[0] += 1
+
+                if set_target_failures[0] > 0:
+                    log.warning(
+                        "set_target recovered after %d failures. "
+                        "state=%s last_visible_command=%s last_command=%s last_ok_gap=%.3fs "
+                        "queue=%d current_move=%s sway=%s breathing=%s",
+                        set_target_failures[0],
+                        loop_state,
+                        last_visible_command[0],
+                        last_command[0],
+                        time.monotonic() - last_set_target_ok_time[0],
+                        len(move_queue),
+                        current_move[0].__class__.__name__
+                        if current_move[0] is not None
+                        else "None",
+                        has_speech_sway,
+                        has_breathing,
+                    )
+
                 set_target_failures[0] = 0
+                last_set_target_ok_time[0] = time.monotonic()
+                last_set_target_ok_state[0] = loop_state
 
             except Exception as e:
+                set_target_total[0] += 1
+                set_target_fail_total[0] += 1
                 set_target_failures[0] += 1
 
                 now_t = time.monotonic()
+                gap = now_t - last_set_target_ok_time[0]
 
                 if now_t - last_err_time[0] >= 2.0:
-                    msg = f"set_target failed: {e}"
+                    msg = (
+                        f"set_target failed: {e} "
+                        f"fail={set_target_failures[0]}/{MAX_SET_TARGET_FAILURES} "
+                        f"state={loop_state} "
+                        f"last_visible_command={last_visible_command[0]} "
+                        f"last_command={last_command[0]} "
+                        f"last_ok_gap={gap:.3f}s "
+                        f"queue={len(move_queue)} "
+                        f"current_move="
+                        f"{current_move[0].__class__.__name__ if current_move[0] is not None else 'None'} "
+                        f"sway={has_speech_sway} "
+                        f"breathing={has_breathing} "
+                        f"total={set_target_total[0]} "
+                        f"ok={set_target_ok_total[0]} "
+                        f"fail_total={set_target_fail_total[0]}"
+                    )
 
                     if err_suppressed[0]:
                         msg += f" ({err_suppressed[0]} repeats suppressed)"
@@ -415,8 +534,22 @@ def main() -> None:
                 if set_target_failures[0] >= MAX_SET_TARGET_FAILURES:
                     log.error(
                         "Connection appears lost after %d set_target failures. "
+                        "state=%s last_visible_command=%s last_command=%s last_ok_gap=%.3fs "
+                        "last_ok_state=%s queue=%d current_move=%s "
+                        "sway=%s breathing=%s. "
                         "Exiting worker so controller can reconnect.",
                         set_target_failures[0],
+                        loop_state,
+                        last_visible_command[0],
+                        last_command[0],
+                        gap,
+                        last_set_target_ok_state[0],
+                        len(move_queue),
+                        current_move[0].__class__.__name__
+                        if current_move[0] is not None
+                        else "None",
+                        has_speech_sway,
+                        has_breathing,
                     )
                     stop_event.set()
                     break
@@ -456,6 +589,23 @@ def main() -> None:
 
             action, kw = pickle.loads(data)
 
+            last_command[0] = action
+            last_command_time[0] = time.monotonic()
+
+            if action != "set_speech_offsets":
+                last_visible_command[0] = action
+                last_visible_command_time[0] = time.monotonic()
+
+                log.info(
+                    "Command received: %s queue=%d current_move=%s last_state=%s",
+                    action,
+                    len(move_queue),
+                    current_move[0].__class__.__name__
+                    if current_move[0] is not None
+                    else "None",
+                    last_loop_state[0],
+                )
+
         except Exception:
             break
 
@@ -483,9 +633,25 @@ def main() -> None:
                     log.warning("push_audio_sample failed: %s", e)
 
             elif action == "set_speech_offsets":
+                new_offsets = tuple(kw["offsets"])
+
                 with speech_lock:
-                    speech_offsets[0] = tuple(kw["offsets"])
+                    old_has_sway = any(v != 0.0 for v in speech_offsets[0])
+                    new_has_sway = any(v != 0.0 for v in new_offsets)
+
+                    speech_offsets[0] = new_offsets
                     speech_dirty[0] = True
+
+                if old_has_sway != new_has_sway:
+                    log.info(
+                        "Speech sway %s. queue=%d current_move=%s last_state=%s",
+                        "START" if new_has_sway else "STOP",
+                        len(move_queue),
+                        current_move[0].__class__.__name__
+                        if current_move[0] is not None
+                        else "None",
+                        last_loop_state[0],
+                    )
 
                 last_activity[0] = time.monotonic()
 
@@ -523,6 +689,7 @@ def main() -> None:
 
                 if clear_first:
                     _clear_motion_state()
+                    
 
                 _queue_pose_move(
                     target_head_deg=OFF_HEAD_DEG,
@@ -571,6 +738,7 @@ def main() -> None:
 
             elif action == "clear_moves":
                 _clear_motion_state()
+                log.info("Cleared moves and speech sway")
 
             elif action == "wiggle":
                 robot.goto_target(antennas=[0.5, -0.5], duration=0.5)

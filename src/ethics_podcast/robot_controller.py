@@ -44,6 +44,9 @@ class RobotController:
         self.role = role
         self.use_media = use_media
 
+        self._last_pose_command: str | None = None
+        self._last_pose_time: float = 0.0
+
     def start(self) -> None:
         """Launch the worker subprocess and wait for READY signal."""
         env = {**os.environ}
@@ -246,6 +249,7 @@ class RobotController:
 
     def queue_emotion(self, emotion_name: str) -> None:
         """Queue a recorded emotion to play through the move queue."""
+        self._last_pose_command = None
         self._send("queue_emotion", {"emotion": emotion_name})
 
     def queue_dance(self, dance_name: str) -> None:
@@ -272,13 +276,30 @@ class RobotController:
             },
         )
 
-    def queue_power_off_pose(self, duration: float = 0.8) -> None:
+    def queue_power_off_pose(
+        self,
+        duration: float = 0.8,
+        force: bool = False,
+    ) -> None:
         """Move to a power-off-like pose.
 
         This does not turn off motors.
         It only sends a motion command to lower the head/face direction
         and antennas.
         """
+        now = time.monotonic()
+
+        if (
+            not force
+            and self._last_pose_command == "power_off"
+            and now - self._last_pose_time < 8.0
+        ):
+            logger.debug(
+                "Skipping duplicate power-off pose for robot %s.",
+                self.role,
+            )
+            return
+
         self._send(
             "queue_power_off_pose",
             {
@@ -287,11 +308,31 @@ class RobotController:
             },
         )
 
-    def queue_speaking_ready_pose(self, duration: float = 0.7) -> None:
+        self._last_pose_command = "power_off"
+        self._last_pose_time = now
+
+    def queue_speaking_ready_pose(
+        self,
+        duration: float = 0.7,
+        force: bool = False,
+    ) -> None:
         """Return to the normal pose before speaking.
 
         Use this before queue_emotion or speech_motion_loop.
         """
+        now = time.monotonic()
+
+        if (
+            not force
+            and self._last_pose_command == "speaking_ready"
+            and now - self._last_pose_time < 8.0
+        ):
+            logger.debug(
+                "Skipping duplicate speaking-ready pose for robot %s.",
+                self.role,
+            )
+            return
+
         self._send(
             "queue_speaking_ready_pose",
             {
@@ -299,6 +340,9 @@ class RobotController:
                 "clear_first": True,
             },
         )
+
+        self._last_pose_command = "speaking_ready"
+        self._last_pose_time = now
 
     def clear_moves(self) -> None:
         """Stop current move and clear the queue."""
