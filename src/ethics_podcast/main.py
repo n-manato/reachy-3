@@ -21,6 +21,7 @@ import select
 import subprocess
 import sys
 import time
+from dataclasses import replace
 
 import requests
 
@@ -28,6 +29,11 @@ from ethics_podcast.config import Config
 
 TV_AUDIO_DELAY = 0.0
 ROBOT_AUDIO_DELAY = 0.0
+
+
+def _web_display_config(config: Config) -> Config:
+    """Force the browser display backend for the multi-display exhibit."""
+    return replace(config, display_backend="web")
 
 
 
@@ -494,11 +500,15 @@ def _pick_session(action: str = "use") -> str | None:
     if action == "play":
         print(f"    {len(names) + 1}. Video Discussion Loop")
         print("       Play each video, then let the three robots discuss it.")
+        print(f"    {len(names) + 2}. Multi-Display Exhibit")
+        print("       Same loop across 4 screens (big top + 3 mini under robots).")
+        print(f"    {len(names) + 3}. Multi-Display Exhibit (Demo, no robots)")
+        print("       4-screen UI with computer audio — no robots / no SDK needed.")
 
     if action == "play" and generated:
         print("    a. Play ALL generated sessions in sequence")
 
-    max_number = len(names) + 1 if action == "play" else len(names)
+    max_number = len(names) + 3 if action == "play" else len(names)
 
     pick = input(
         f"\n  Select session (1-{max_number}"
@@ -511,6 +521,12 @@ def _pick_session(action: str = "use") -> str | None:
 
     if action == "play" and pick == str(len(names) + 1):
         return "VIDEO_DISCUSSION_LOOP"
+
+    if action == "play" and pick == str(len(names) + 2):
+        return "MULTI_DISPLAY_LOOP"
+
+    if action == "play" and pick == str(len(names) + 3):
+        return "MULTI_DISPLAY_DEMO"
 
     try:
         idx = int(pick) - 1
@@ -625,6 +641,22 @@ def main() -> None:
                     wake_proc = None
                     continue
 
+                # Demo mode forces computer audio — no audio picker needed.
+                if session_name == "MULTI_DISPLAY_DEMO":
+                    from ethics_podcast.multi_video_discussion import (
+                        run_multi_display_discussion_loop,
+                    )
+
+                    asyncio.run(
+                        run_multi_display_discussion_loop(
+                            _web_display_config(config),
+                            demo_mode=True,
+                        )
+                    )
+
+                    wake_proc = None
+                    continue
+
                 audio_mode = _pick_audio_mode()
                 _print_audio_mode(audio_mode)
 
@@ -634,6 +666,23 @@ def main() -> None:
                     asyncio.run(
                         run_video_discussion_loop(
                             config,
+                            audio_mode=audio_mode,
+                            tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                            robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                        )
+                    )
+
+                    wake_proc = None
+                    continue
+
+                if session_name == "MULTI_DISPLAY_LOOP":
+                    from ethics_podcast.multi_video_discussion import (
+                        run_multi_display_discussion_loop,
+                    )
+
+                    asyncio.run(
+                        run_multi_display_discussion_loop(
+                            _web_display_config(config),
                             audio_mode=audio_mode,
                             tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
                             robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,

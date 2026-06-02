@@ -1,0 +1,25 @@
+# Lightweight dependencies to run the Multi-Display UI on a robot-less PC
+# (preview script + the menu app's "Multi-Display Exhibit (Demo, no robots)").
+#
+# This intentionally OMITS reachy_mini / pygobject / GStreamer — those are only
+# needed to drive real robots and are hard to build on Windows. The demo uses
+# MockRobots and plays audio on the computer's speakers.
+#
+# Setup:
+#   python -m venv .venv
+#   .\.venv\Scripts\python.exe -m pip install -r requirements-demo.txt
+#
+# Run:
+#   $env:PYTHONPATH = "C:\DEV\Reachy\src"
+#   .\.venv\Scripts\python.exe -m ethics_podcast.main      # menu -> Play -> Demo
+#   .\.venv\Scripts\python.exe scripts\preview_displays.py # standalone preview
+
+PySide6
+python-vlc
+numpy
+scipy
+sounddevice
+pygame
+python-dotenv
+requests
+openai

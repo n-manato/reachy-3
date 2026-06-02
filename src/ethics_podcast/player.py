@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 BASE_OUTPUT_DIR = Path("output")
 
-AudioMode = Literal["robot", "computer", "surround", "hybrid_surround"]
+AudioMode = Literal["robot", "computer", "surround", "hybrid_surround", "display"]
 
 ROLE_PAN = {
     "student": -0.85,    # Bentham-Bot, left
@@ -75,9 +75,34 @@ SWAY_DB_LOW = -46.0
 SWAY_DB_HIGH = -18.0
 LOUDNESS_GAMMA = 0.9
 
-SWAY_HZ = 100
+SWAY_HZ = 50
 SWAY_SMOOTHING = 0.3
 SWAY_MIN_WHILE_SPEAKING = 0.22
+
+# Diagnostic switch: disable the speaker-ready / listener-lowered head posture
+# choreography without changing speech sway or recorded emotions.
+ENABLE_HEAD_POSTURE = True
+
+# Diagnostic switch: disable continuous speaking sway while keeping recorded
+# emotions and the rest of the playback flow intact.
+ENABLE_SPEECH_SWAY = True
+
+# Diagnostic switch: disable generated recorded emotions/dances. This leaves
+# audio, UI, and timing intact while avoiding recorded move set_target streams.
+ENABLE_RECORDED_ACTIONS = True
+
+
+def _diag(message: str) -> None:
+    """Print a timeline marker that is easy to grep in field logs."""
+    print(f"  [diag {time.strftime('%H:%M:%S')}] {message}", flush=True)
+
+
+def _robot_diag(*robots) -> str:
+    parts = []
+    for robot in robots:
+        status = getattr(robot, "diagnostic_status", None)
+        parts.append(status() if callable(status) else type(robot).__name__)
+    return " | ".join(parts)
 
 def _rms_dbfs(pcm: np.ndarray) -> float:
     """Return loudness in dBFS."""
@@ -186,6 +211,12 @@ async def _stream_audio(
     robot_audio_delay: float = 0.0,
 ) -> None:
     """Send audio to robot speaker, computer speaker, surround, or both."""
+
+    if audio_mode == "display":
+        # The active browser display plays this turn's WAV through the same
+        # output device that plays the video. Motion timing is still handled by
+        # the duration sleep in _play_turn().
+        return
 
     if audio_mode == "robot":
         await _play_robot_audio(robot, pcm, sample_rate, robot_audio_delay=0.0)
@@ -297,7 +328,7 @@ async def _replay_tool_calls(
     stop: asyncio.Event,
 ) -> None:
     """Replay pre-generated tool calls at their recorded timestamps."""
-    if not tool_calls:
+    if not tool_calls or not ENABLE_RECORDED_ACTIONS:
         return
 
     t_start = time.monotonic()
@@ -337,7 +368,9 @@ async def _replay_tool_calls(
 
 async def _setup_listener(robot: RobotController, look_yaw: float) -> None:
     """Move a non-speaking robot to power-off-like idle pose."""
-    robot.queue_power_off_pose(duration=0.8)
+    if not ENABLE_HEAD_POSTURE:
+        return
+    robot.queue_power_off_pose(duration=1.2)
 
 async def _setup_listeners(listeners: list[tuple[RobotController, float]]) -> None:
     """Set all non-speaking robots to power-off-like idle pose.
@@ -361,8 +394,18 @@ async def _play_turn(
     pan: float = 0.0,
     tv_audio_delay: float = 0.0,
     robot_audio_delay: float = 0.0,
+    display=None,
+    video_window=None,
+    role: str | None = None,
+    text: str = "",
+    turn_number: int | None = None,
 ) -> None:
-    """Play one turn with audio, speech sway, actions, and listener movement."""
+    """Play one turn with audio, speech sway, actions, and listener movement.
+
+    When ``display``/``video_window`` are provided, the subtitle and browser
+    speech audio are fired from inside this function — AFTER the speaker's head
+    is fully raised — so the voice starts in sync with the speech sway.
+    """
     if not audio_path.exists():
         logger.warning("Audio file not found: %s", audio_path)
         await asyncio.sleep(duration)
@@ -378,27 +421,49 @@ async def _play_turn(
         listener.ensure_alive()
 
     speaker.clear_moves()
+    await asyncio.sleep(0.08)
 
     for listener, _ in listeners:
         listener.clear_moves()
+        await asyncio.sleep(0.08)
 
-    # Speaker returns to normal speaking-ready pose first.
-    speaker.queue_speaking_ready_pose(duration=0.48)
+    if ENABLE_HEAD_POSTURE:
+        # Speaker returns to normal speaking-ready pose first.
+        ready_duration = 0.83
+        ready_settle = 0.15
+        ready_started = time.monotonic()
+        speaker.queue_speaking_ready_pose(duration=ready_duration)
+        await asyncio.sleep(0.12)
 
-    await asyncio.sleep(0.08)
+        # Non-speaking robots go to power-off-like pose.
+        await _setup_listeners(listeners)
 
-    # Non-speaking robots go to power-off-like pose.
-    await _setup_listeners(listeners)
+        # Start audio + sway only once the speaker's head is FULLY raised, so
+        # the speech sway stays in sync with the voice from the very first word.
+        # The listener setup above already consumed part of the ready move; wait
+        # out whatever time is left (plus a short settle), and no more.
+        remaining = ready_duration + ready_settle - (time.monotonic() - ready_started)
+        if remaining > 0:
+            await asyncio.sleep(remaining)
 
-    # Wait until speaker is mostly front-facing.
-    await asyncio.sleep(0.45)
+    # The head is fully raised now (or posture is disabled). Fire the subtitle
+    # and the browser speech audio HERE — after the head is up — so the voice
+    # begins in sync with the speech sway, not before the head finishes rising.
+    if video_window is not None:
+        video_window.show_subtitle(
+            role=role, text=text, turn_number=turn_number, audio_path=audio_path
+        )
+    if display is not None:
+        display.show_subtitle(
+            role=role, text=text, turn_number=turn_number, audio_path=audio_path
+        )
 
     stop = asyncio.Event()
 
     # Do not send an extra speaker head lift here.
     # Audio, speech sway, and emotion timing start from the ready pose.
 
-    await asyncio.gather(
+    tasks = [
         _stream_audio(
             speaker,
             pcm_float32,
@@ -408,21 +473,28 @@ async def _play_turn(
             tv_audio_delay=tv_audio_delay,
             robot_audio_delay=robot_audio_delay,
         ),
-        _drive_speech_sway(
-            speaker,
-            pcm_float32,
-            sample_rate,
-            duration,
-            speaker_phases,
-            stop,
-        ),
         _replay_tool_calls(speaker, tool_calls, stop),
         asyncio.sleep(duration + 0.01),
-    )
+    ]
+    if ENABLE_SPEECH_SWAY:
+        tasks.append(
+            _drive_speech_sway(
+                speaker,
+                pcm_float32,
+                sample_rate,
+                duration,
+                speaker_phases,
+                stop,
+            )
+        )
+
+    await asyncio.gather(*tasks)
     stop.set()
 
-    # Lower the speaker immediately after speech ends.
-    speaker.queue_power_off_pose(duration=1.2)
+    if ENABLE_HEAD_POSTURE:
+        # Lower the speaker immediately after speech ends.
+        speaker.queue_power_off_pose(duration=1.2)
+        await asyncio.sleep(0.08)
 
     # Reset speech sway after sending the lower command.
     speaker.set_speech_offsets(0, 0, 0, 0, 0, 0)
@@ -443,11 +515,17 @@ async def run_playback_with_connected_robots(
     tv_audio_delay: float = 0.0,
     robot_audio_delay: float = 0.0,
     video_window=None,
+    display=None,
 ) -> None:
-    
+
     """Play a saved conversation using already-connected robots.
 
     This avoids reconnecting before every video discussion.
+
+    Either `video_window` (legacy single window) or `display` (new
+    DisplayManager multi-screen mode) may be supplied — they are mutually
+    exclusive UI drivers. When `display` is used, the next speaker's role is
+    looked ahead each turn so the gaze-guidance flow can point to it.
     """
     output_dir = BASE_OUTPUT_DIR / session_name
     meta_path = output_dir / "conversation.json"
@@ -489,6 +567,12 @@ async def run_playback_with_connected_robots(
     labels = ROLE_LABELS
 
     print("\nStarting playback!\n")
+    _diag(
+        "playback_start "
+        f"session={session_name} robots={_robot_diag(robot_a, robot_b, robot_c)} "
+        f"head={ENABLE_HEAD_POSTURE} sway={ENABLE_SPEECH_SWAY} "
+        f"recorded={ENABLE_RECORDED_ACTIONS}"
+    )
 
     bgm_path = get_bgm_path_for_session(session_name)
 
@@ -506,10 +590,20 @@ async def run_playback_with_connected_robots(
     window_stop = asyncio.Event()
     window_task = None
 
-    if video_window is not None:
+    ui = video_window if video_window is not None else display
+
+    if ui is not None:
         window_task = asyncio.create_task(
-            video_window.pump_events_forever(window_stop)
+            ui.pump_events_forever(window_stop)
         )
+
+    # Roles of the upcoming turns (skipping unknown roles) so the gaze flow
+    # can look ahead to the next speaker.
+    playable_roles = [t["role"] for t in turns if t.get("role") in robots]
+    role_cursor = 0
+
+    if display is not None and playable_roles:
+        display.point_to(playable_roles[0])
 
     try:
         for turn in turns:
@@ -522,6 +616,14 @@ async def run_playback_with_connected_robots(
             if role not in robots:
                 logger.warning("Unknown role '%s'. Skipping turn.", role)
                 continue
+
+            # Determine the next speaker for gaze guidance.
+            role_cursor += 1
+            next_role = (
+                playable_roles[role_cursor]
+                if role_cursor < len(playable_roles)
+                else None
+            )
 
             speaker = robots[role]
             speaker_phases = phases[role]
@@ -551,14 +653,23 @@ async def run_playback_with_connected_robots(
                 f"{labels[role]} ({duration}s{tools_str}): "
                 f"{transcript[:70]}..."
             )
+            _diag(
+                f"turn_start turn={turn['turn']} role={role} "
+                f"duration={duration:.2f}s actions={len(tool_calls)} "
+                f"robots={_robot_diag(robot_a, robot_b, robot_c)}"
+            )
 
-            if video_window is not None:
-                video_window.show_subtitle(
-                    role=role,
-                    text=transcript,
-                    turn_number=turn.get("turn"),
-                    audio_path=audio_file,
-                )
+            turn_audio_mode: AudioMode = audio_mode
+            if (
+                display is not None
+                and getattr(display, "plays_speech_audio", False)
+                and audio_mode in ("computer", "surround")
+            ):
+                turn_audio_mode = "display"
+
+            # The subtitle + speech audio are fired INSIDE _play_turn, after the
+            # speaker's head is fully raised, so the voice and sway start
+            # together (they used to fire here, before the head rose).
             await _play_turn(
                 speaker=speaker,
                 listeners=listeners,
@@ -566,28 +677,43 @@ async def run_playback_with_connected_robots(
                 duration=duration,
                 tool_calls=tool_calls,
                 speaker_phases=speaker_phases,
-                audio_mode=audio_mode,
+                audio_mode=turn_audio_mode,
                 pan=ROLE_PAN.get(role, 0.0),
                 tv_audio_delay=tv_audio_delay,
                 robot_audio_delay=robot_audio_delay,
+                display=display,
+                video_window=video_window,
+                role=role,
+                text=transcript,
+                turn_number=turn.get("turn"),
+            )
+            _diag(
+                f"turn_play_done turn={turn['turn']} role={role} "
+                f"robots={_robot_diag(robot_a, robot_b, robot_c)}"
             )
 
             if video_window is not None:
                 video_window.finish_subtitle()
 
+            if display is not None:
+                display.finish_subtitle(role, next_role)
+
             await asyncio.sleep(config.inter_turn_pause)
+            _diag(f"turn_end turn={turn['turn']} role={role}")
 
         print("\nPlayback complete!")
+        _diag(f"playback_complete session={session_name}")
 
     finally:
-        if video_window is not None:
+        _diag(f"playback_cleanup session={session_name}")
+        if ui is not None:
             window_stop.set()
 
             if window_task is not None:
                 await window_task
 
         await bgm.stop()
-    
+
 async def run_playback(
     config: Config,
     session_name: str | None = None,

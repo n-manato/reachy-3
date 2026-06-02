@@ -22,6 +22,7 @@ Commands accepted via pipe:
 
 import logging
 import math
+import os
 import pickle
 import struct
 import sys
@@ -36,20 +37,38 @@ from scipy.signal import resample
 
 OPENAI_SAMPLE_RATE = 24000
 
-# Lower control rate to avoid WebSocket timeouts with three robots.
-CONTROL_HZ = 100
+# Control-loop rate. Sending set_target this often is what loads the shared
+# Wi-Fi: with the program running, ICMP ping to the robots jumps from ~15 ms to
+# 500-1400 ms with timeouts, while idle ping stays clean — i.e. our own traffic
+# is congesting the link/adapter. Both values are env-tunable so the rate can
+# be swept against a live ping without editing code:
+#   ROBOT_CONTROL_HZ  — rate during emotions / goto poses (default 25, was 50)
+#   ROBOT_SPEECH_HZ   — rate during speech-only sway, a slow ~0.75 Hz sinusoid
+#                       that is fine at a low rate (default 10)
+CONTROL_HZ = int(os.environ.get("ROBOT_CONTROL_HZ", "50"))
 CONTROL_PERIOD = 1.0 / CONTROL_HZ
 
-# Idle breathing is disabled for stability.
-ENABLE_IDLE_BREATHING = False
+SPEECH_ONLY_HZ = int(os.environ.get("ROBOT_SPEECH_HZ", "50"))
+SPEECH_ONLY_PERIOD = 1.0 / SPEECH_ONLY_HZ
+CONTROL_PHASE_OFFSETS = {
+    "student": 0.000,
+    "professor": CONTROL_PERIOD / 3.0,
+    "moderator": CONTROL_PERIOD * 2.0 / 3.0,
+    "robot_a": 0.000,
+    "robot_b": CONTROL_PERIOD / 3.0,
+    "robot_c": CONTROL_PERIOD * 2.0 / 3.0,
+}
 
-BREATHING_Z_AMP = 0.0
+# Idle breathing — original values restored (head bob + antenna sway while idle).
+ENABLE_IDLE_BREATHING = True
+
+BREATHING_Z_AMP = 0.005       # 5mm head bob
 BREATHING_FREQ = 0.1
-BREATHING_ANT_AMP_RAD = 0.0
+BREATHING_ANT_AMP_RAD = 0.26  # ~15 degrees antenna sway
 BREATHING_ANT_FREQ = 0.5
 
-# Keep this very high because breathing is disabled.
-IDLE_DELAY = 9999.0
+# Seconds of idle before breathing starts.
+IDLE_DELAY = 0.3
 
 # Neutral antenna position.
 # This must exist because last_primary_ant uses it.
@@ -63,19 +82,32 @@ NEUTRAL_ANT = (-0.1745, 0.1745)
 # x, y, z, roll, pitch, yaw
 #
 # If the head goes the wrong direction, change 35 to -35.
-OFF_HEAD_DEG =  (0, 0, -0.19, 0, 69, 0)
+OFF_HEAD_DEG =  (0, 0, -0.04, 0, 23, 0)
 
 # Antennas down.
 # If the antennas move the wrong direction, swap the signs.
-OFF_ANT = (-3.3, 3.3)
+OFF_ANT = (-math.pi, math.pi)
 # Speaking ready pose.
 # This returns the head/face direction and antennas to the normal state.
 READY_HEAD_DEG = (0, 0, 0, 0, 0, 0)
 READY_ANT = NEUTRAL_ANT
 
-# If set_target fails repeatedly, assume the WebSocket connection is dead.
-# The worker exits so robot_controller.py can restart it.
-MAX_SET_TARGET_FAILURES = 200
+# When an emotion (a recorded ABSOLUTE pose sequence) starts, blend from the
+# current pose into its first frame over this many seconds so the head does not
+# snap. The blend is a _GotoMove, so it is min-jerk eased.
+EMOTION_BLEND_DURATION = 0.3
+
+# Treat the control connection as dead only after set_target has failed
+# CONTINUOUSLY for this many seconds. The Wi-Fi link to the robots stalls for
+# up to ~1.5 s (confirmed by ICMP ping spikes of 500-1400 ms and occasional
+# timeouts — and ICMP bypasses the robot daemon entirely, so this is a
+# network/RF problem, not daemon load). The underlying websocket usually
+# survives such stalls and set_target starts succeeding again on its own.
+# The old count-based threshold (24 failures ≈ 0.5 s at 50 Hz) tripped on these
+# transient stalls and killed the worker needlessly, turning a ~1 s hiccup into
+# an 8-20 s restart freeze. A multi-second grace window lets most stalls
+# self-heal with no restart; a genuinely dead daemon still triggers one.
+FAILURE_GRACE_SECONDS = 4.0
 
 
 
@@ -98,6 +130,8 @@ def main() -> None:
     from reachy_mini.utils.interpolation import (
         compose_world_offset,
         linear_pose_interpolation,
+        time_trajectory,
+        InterpolationTechnique,
     )
     from reachy_mini.motion.recorded_move import RecordedMoves
 
@@ -175,6 +209,7 @@ def main() -> None:
     last_primary_head: list = [neutral_head.copy()]
     last_primary_ant: list = [NEUTRAL_ANT]
     last_primary_body: list = [0.0]
+    posture_state: list = ["unknown"]
 
     last_activity: list = [time.monotonic()]
     breathing_active: list = [False]
@@ -188,22 +223,9 @@ def main() -> None:
     err_suppressed = [0]
     last_err_time = [0.0]
     set_target_failures = [0]
-
-    # ── Debug state for set_target connection loss ─────────────────────────
-    last_command = ["none"]
-    last_command_time = [time.monotonic()]
-    last_visible_command = ["none"]
-    last_visible_command_time = [time.monotonic()]
-
-    last_set_target_ok_time = [time.monotonic()]
-    last_set_target_ok_state = ["none"]
-
-    set_target_total = [0]
-    set_target_ok_total = [0]
-    set_target_fail_total = [0]
-
-    last_loop_state = ["none"]
-
+    # monotonic timestamp of the first failure in the current failing streak,
+    # or None while set_target is succeeding.
+    first_failure_time: list = [None]
     recorded_moves_cache: list = [None]
 
     def _get_recorded_moves():
@@ -214,18 +236,34 @@ def main() -> None:
 
         return recorded_moves_cache[0]
 
+    def _move_debug_label(move) -> str:
+        if move is None:
+            return "none"
+        name = type(move).__name__
+        duration = getattr(move, "duration", None)
+        if duration is None:
+            return name
+        try:
+            return f"{name}(duration={float(duration):.2f}s)"
+        except Exception:
+            return name
+
     class _GotoMove:
         """Local inline goto move. Interpolates from start to target."""
 
-        def __init__(self, sh, sa, th, ta, d):
+        def __init__(self, sh, sa, th, ta, d, label: str = "goto"):
             self._sh = sh
             self._sa = np.array(sa)
             self._th = th
             self._ta = np.array(ta)
             self.duration = d
+            self.label = label
 
         def evaluate(self, t):
-            alpha = max(0.0, min(1.0, t / self.duration))
+            p = max(0.0, min(1.0, t / self.duration))
+            # SDK-standard min-jerk easing: smooth accel/decel, no abrupt
+            # start/stop (matches goto_target and the daemon's own goto).
+            alpha = time_trajectory(p, InterpolationTechnique.MIN_JERK)
             h = linear_pose_interpolation(self._sh, self._th, alpha)
             a = (1 - alpha) * self._sa + alpha * self._ta
             return h, a, 0.0
@@ -243,7 +281,12 @@ def main() -> None:
 
         return start_head, start_ant
 
-    def _queue_pose_move(target_head_deg, target_ant, duration: float):
+    def _queue_pose_move(
+        target_head_deg,
+        target_ant,
+        duration: float,
+        label: str = "goto",
+    ):
         """Queue a simple head + antenna pose move."""
         target_head = create_head_pose(*target_head_deg, degrees=True)
         start_head, start_ant = _get_current_start_pose()
@@ -255,46 +298,33 @@ def main() -> None:
                 target_head,
                 target_ant,
                 duration,
+                label,
             )
         )
 
         last_activity[0] = time.monotonic()
         breathing_active[0] = False
 
-    def _clear_motion_state():
+    def _clear_motion_state(reset_posture: bool = False):
         """Stop current queued movement and stop speech sway."""
         move_queue.clear()
         current_move[0] = None
         move_start[0] = None
         breathing_active[0] = False
+        if reset_posture:
+            posture_state[0] = "unknown"
 
         with speech_lock:
             speech_offsets[0] = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
             speech_dirty[0] = True
-            
-    def _safe_move_eval_time(move, t: float) -> float:
-        """Return a safe timestamp for RecordedMove.evaluate().
-
-        Some recorded moves raise an error when evaluated exactly at
-        duration or a tiny bit beyond it. Keep evaluation slightly inside
-        the valid range.
-        """
-        duration = float(getattr(move, "duration", 0.0) or 0.0)
-
-        if duration <= 0.0:
-            return 0.0
-
-        # Stay 1 ms before the end.
-        # This avoids:
-        # "Tried to evaluate recorded move beyond its duration."
-        end_t = max(0.0, duration - 0.001)
-
-        return max(0.0, min(float(t), end_t))
 
     # ── Control loop ───────────────────────────────────────────────────────
 
     def control_loop() -> None:
         now = time.monotonic
+        phase_offset = CONTROL_PHASE_OFFSETS.get(role.lower(), 0.0)
+        if phase_offset > 0:
+            time.sleep(phase_offset)
 
         while not stop_event.is_set():
             t = now()
@@ -306,12 +336,8 @@ def main() -> None:
                 elapsed = t - move_start[0]
 
                 if elapsed >= cm.duration:
-                    finished_move = cm
-                    finished_elapsed = elapsed
-
                     try:
-                        final_t = _safe_move_eval_time(cm, cm.duration)
-                        h, a, b = cm.evaluate(final_t)
+                        h, a, b = cm.evaluate(cm.duration)
 
                         if h is not None:
                             last_primary_head[0] = h.copy()
@@ -322,38 +348,21 @@ def main() -> None:
                         if b is not None:
                             last_primary_body[0] = float(b)
 
-                    except Exception as e:
-                        log.warning(
-                            "Move final evaluate failed: %s move=%s",
-                            e,
-                            finished_move.__class__.__name__,
-                        )
+                    except Exception:
+                        pass
+
+                    label = getattr(cm, "label", None)
+                    if label is not None:
+                        posture_state[0] = label
 
                     current_move[0] = None
                     move_start[0] = None
-
-                    log.info(           
-                        "Move END: %s elapsed=%.3fs duration=%.3fs queue_remaining=%d last_visible_command=%s last_command=%s",
-                        finished_move.__class__.__name__,
-                        finished_elapsed,
-                        getattr(finished_move, "duration", -1.0),
-                        len(move_queue),
-                        last_visible_command[0],    
-                        last_command[0],
-                    )
 
             # 2. Start next queued move.
             if current_move[0] is None and move_queue:
                 current_move[0] = move_queue.popleft()
                 move_start[0] = t
                 breathing_active[0] = False
-                log.info(
-                    "Move START: %s queue_remaining=%d last_visible_command=%s last_command=%s",
-                    current_move[0].__class__.__name__,
-                    len(move_queue),
-                    last_visible_command[0],
-                    last_command[0],
-                )
 
             # 3. Start idle breathing only if enabled.
             if (
@@ -370,8 +379,7 @@ def main() -> None:
                 elapsed = t - move_start[0]
 
                 try:
-                    safe_elapsed = _safe_move_eval_time(current_move[0], elapsed)
-                    h, a, b = current_move[0].evaluate(safe_elapsed)
+                    h, a, b = current_move[0].evaluate(elapsed)
 
                     head = h if h is not None else neutral_head
                     ant = (float(a[0]), float(a[1])) if a is not None else NEUTRAL_ANT
@@ -389,9 +397,14 @@ def main() -> None:
             elif breathing_active[0]:
                 bt = t - last_activity[0] - IDLE_DELAY
 
+                # Breathe ON TOP of the pose the robot is currently holding
+                # (e.g. the lowered power-off pose), instead of resetting to
+                # neutral. A lowered/listening robot stays down while it gently
+                # bobs its head and sways its already-lowered antennas —
+                # "resting but alive".
                 z = BREATHING_Z_AMP * math.sin(2 * math.pi * BREATHING_FREQ * bt)
 
-                head = create_head_pose(
+                breath_offset = create_head_pose(
                     0,
                     0,
                     z,
@@ -401,13 +414,19 @@ def main() -> None:
                     degrees=False,
                     mm=False,
                 )
+                head = compose_world_offset(
+                    last_primary_head[0],
+                    breath_offset,
+                    reorthonormalize=True,
+                )
 
                 sway = BREATHING_ANT_AMP_RAD * math.sin(
                     2 * math.pi * BREATHING_ANT_FREQ * bt
                 )
 
-                ant = (sway, -sway)
-                body = 0.0
+                base_ant = last_primary_ant[0]
+                ant = (base_ant[0] + sway, base_ant[1] - sway)
+                body = last_primary_body[0]
 
             else:
                 head = last_primary_head[0]
@@ -445,80 +464,40 @@ def main() -> None:
             has_speech_sway = any(v != 0.0 for v in so)
             has_breathing = breathing_active[0]
 
-            state_parts = []
-
-            if has_active_move:
-                state_parts.append("move")
-
-            if has_speech_sway:
-                state_parts.append("sway")
-
-            if has_breathing:
-                state_parts.append("breathing")
-
-            if not state_parts:
-                state_parts.append("idle")
-
-            loop_state = "+".join(state_parts)
-            last_loop_state[0] = loop_state
-
             if not has_active_move and not has_speech_sway and not has_breathing:
                 time.sleep(CONTROL_PERIOD)
                 continue
 
-            # 7. Single set_target call.
+            # 7. Single full-target call.
+            speech_only = has_speech_sway and not has_active_move and not has_breathing
+            send_mode = "full"
+
             try:
                 robot.set_target(head=head, antennas=ant, body_yaw=body)
-
-                set_target_total[0] += 1
-                set_target_ok_total[0] += 1
-
-                if set_target_failures[0] > 0:
-                    log.warning(
-                        "set_target recovered after %d failures. "
-                        "state=%s last_visible_command=%s last_command=%s last_ok_gap=%.3fs "
-                        "queue=%d current_move=%s sway=%s breathing=%s",
-                        set_target_failures[0],
-                        loop_state,
-                        last_visible_command[0],
-                        last_command[0],
-                        time.monotonic() - last_set_target_ok_time[0],
-                        len(move_queue),
-                        current_move[0].__class__.__name__
-                        if current_move[0] is not None
-                        else "None",
-                        has_speech_sway,
-                        has_breathing,
-                    )
-
                 set_target_failures[0] = 0
-                last_set_target_ok_time[0] = time.monotonic()
-                last_set_target_ok_state[0] = loop_state
+                first_failure_time[0] = None
 
             except Exception as e:
-                set_target_total[0] += 1
-                set_target_fail_total[0] += 1
                 set_target_failures[0] += 1
 
                 now_t = time.monotonic()
-                gap = now_t - last_set_target_ok_time[0]
+                if first_failure_time[0] is None:
+                    first_failure_time[0] = now_t
 
                 if now_t - last_err_time[0] >= 2.0:
+                    active = current_move[0]
+                    elapsed = (
+                        time.monotonic() - move_start[0]
+                        if active is not None and move_start[0] is not None
+                        else 0.0
+                    )
+                    speech_active = any(v != 0.0 for v in so)
                     msg = (
-                        f"set_target failed: {e} "
-                        f"fail={set_target_failures[0]}/{MAX_SET_TARGET_FAILURES} "
-                        f"state={loop_state} "
-                        f"last_visible_command={last_visible_command[0]} "
-                        f"last_command={last_command[0]} "
-                        f"last_ok_gap={gap:.3f}s "
-                        f"queue={len(move_queue)} "
-                        f"current_move="
-                        f"{current_move[0].__class__.__name__ if current_move[0] is not None else 'None'} "
-                        f"sway={has_speech_sway} "
-                        f"breathing={has_breathing} "
-                        f"total={set_target_total[0]} "
-                        f"ok={set_target_ok_total[0]} "
-                        f"fail_total={set_target_fail_total[0]}"
+                        f"set_target failed: {e} | "
+                        f"move={_move_debug_label(active)} elapsed={elapsed:.2f}s "
+                        f"queue={len(move_queue)} speech={speech_active} "
+                        f"breathing={breathing_active[0]} "
+                        f"mode={send_mode} speech_only={speech_only}"
                     )
 
                     if err_suppressed[0]:
@@ -531,32 +510,22 @@ def main() -> None:
                 else:
                     err_suppressed[0] += 1
 
-                if set_target_failures[0] >= MAX_SET_TARGET_FAILURES:
+                failing_for = now_t - first_failure_time[0]
+                if failing_for >= FAILURE_GRACE_SECONDS:
                     log.error(
-                        "Connection appears lost after %d set_target failures. "
-                        "state=%s last_visible_command=%s last_command=%s last_ok_gap=%.3fs "
-                        "last_ok_state=%s queue=%d current_move=%s "
-                        "sway=%s breathing=%s. "
-                        "Exiting worker so controller can reconnect.",
+                        "Connection appears lost: set_target failing for %.1fs "
+                        "(%d calls). Exiting worker so controller can reconnect.",
+                        failing_for,
                         set_target_failures[0],
-                        loop_state,
-                        last_visible_command[0],
-                        last_command[0],
-                        gap,
-                        last_set_target_ok_state[0],
-                        len(move_queue),
-                        current_move[0].__class__.__name__
-                        if current_move[0] is not None
-                        else "None",
-                        has_speech_sway,
-                        has_breathing,
                     )
                     stop_event.set()
                     break
 
             # 8. Sleep to maintain control rate.
+            # Throttle hard during speech-only sway to spare the flaky robots.
+            loop_period = SPEECH_ONLY_PERIOD if speech_only else CONTROL_PERIOD
             dt = time.monotonic() - t
-            sleep = max(0, CONTROL_PERIOD - dt)
+            sleep = max(0, loop_period - dt)
 
             if sleep > 0:
                 time.sleep(sleep)
@@ -589,23 +558,6 @@ def main() -> None:
 
             action, kw = pickle.loads(data)
 
-            last_command[0] = action
-            last_command_time[0] = time.monotonic()
-
-            if action != "set_speech_offsets":
-                last_visible_command[0] = action
-                last_visible_command_time[0] = time.monotonic()
-
-                log.info(
-                    "Command received: %s queue=%d current_move=%s last_state=%s",
-                    action,
-                    len(move_queue),
-                    current_move[0].__class__.__name__
-                    if current_move[0] is not None
-                    else "None",
-                    last_loop_state[0],
-                )
-
         except Exception:
             break
 
@@ -633,25 +585,9 @@ def main() -> None:
                     log.warning("push_audio_sample failed: %s", e)
 
             elif action == "set_speech_offsets":
-                new_offsets = tuple(kw["offsets"])
-
                 with speech_lock:
-                    old_has_sway = any(v != 0.0 for v in speech_offsets[0])
-                    new_has_sway = any(v != 0.0 for v in new_offsets)
-
-                    speech_offsets[0] = new_offsets
+                    speech_offsets[0] = tuple(kw["offsets"])
                     speech_dirty[0] = True
-
-                if old_has_sway != new_has_sway:
-                    log.info(
-                        "Speech sway %s. queue=%d current_move=%s last_state=%s",
-                        "START" if new_has_sway else "STOP",
-                        len(move_queue),
-                        current_move[0].__class__.__name__
-                        if current_move[0] is not None
-                        else "None",
-                        last_loop_state[0],
-                    )
 
                 last_activity[0] = time.monotonic()
 
@@ -659,6 +595,25 @@ def main() -> None:
                 rm = _get_recorded_moves()
                 emotion_name = kw["emotion"]
                 emotion_move = rm.get(emotion_name)
+
+                # Blend smoothly from the current pose into the emotion's first
+                # frame so the head does not snap when the emotion starts.
+                try:
+                    fh, fa, _fb = emotion_move.evaluate(0.0)
+                    if fh is not None and fa is not None:
+                        start_head, start_ant = _get_current_start_pose()
+                        move_queue.append(
+                            _GotoMove(
+                                start_head,
+                                start_ant,
+                                fh,
+                                (float(fa[0]), float(fa[1])),
+                                EMOTION_BLEND_DURATION,
+                                "emotion_blend",
+                            )
+                        )
+                except Exception as e:
+                    log.warning("Emotion blend skipped: %s", e)
 
                 move_queue.append(emotion_move)
 
@@ -674,7 +629,28 @@ def main() -> None:
                 dance_name = kw["dance_name"]
 
                 if dance_name in AVAILABLE_MOVES:
-                    move_queue.append(DanceMove(dance_name))
+                    dance_move = DanceMove(dance_name)
+
+                    # Blend smoothly into the dance's first frame so the head
+                    # does not snap when the dance starts (same as emotions).
+                    try:
+                        fh, fa, _fb = dance_move.evaluate(0.0)
+                        if fh is not None and fa is not None:
+                            start_head, start_ant = _get_current_start_pose()
+                            move_queue.append(
+                                _GotoMove(
+                                    start_head,
+                                    start_ant,
+                                    fh,
+                                    (float(fa[0]), float(fa[1])),
+                                    EMOTION_BLEND_DURATION,
+                                    "dance_blend",
+                                )
+                            )
+                    except Exception as e:
+                        log.warning("Dance blend skipped: %s", e)
+
+                    move_queue.append(dance_move)
 
                     last_activity[0] = time.monotonic()
                     breathing_active[0] = False
@@ -686,18 +662,32 @@ def main() -> None:
                 # This does not disable motors.
                 clear_first = kw.get("clear_first", True)
                 dur = kw.get("duration", 0.8)
+                active_label = getattr(current_move[0], "label", None)
+
+                if (
+                    clear_first
+                    and not move_queue
+                    and (posture_state[0] == "off" or active_label == "off")
+                ):
+                    log.info("Skipped power-off-like pose; already lowered")
+                    continue
 
                 if clear_first:
                     _clear_motion_state()
-                    
 
                 _queue_pose_move(
                     target_head_deg=OFF_HEAD_DEG,
                     target_ant=OFF_ANT,
                     duration=dur,
+                    label="off",
                 )
 
-                log.info("Queued power-off-like pose")
+                log.info(
+                    "Queued power-off-like pose: head=%s ant=%s duration=%.2fs",
+                    OFF_HEAD_DEG,
+                    OFF_ANT,
+                    dur,
+                )
 
             elif action == "queue_speaking_ready_pose":
                 # Return to a clean initial pose before speaking.
@@ -706,12 +696,13 @@ def main() -> None:
                 dur = kw.get("duration", 0.7)
 
                 if clear_first:
-                    _clear_motion_state()
+                    _clear_motion_state(reset_posture=True)
 
                 _queue_pose_move(
                     target_head_deg=READY_HEAD_DEG,
                     target_ant=READY_ANT,
                     duration=dur,
+                    label="ready",
                 )
 
                 log.info("Queued speaking-ready pose")
@@ -730,6 +721,7 @@ def main() -> None:
                         target_head,
                         target_ant,
                         dur,
+                        "goto",
                     )
                 )
 
@@ -738,7 +730,6 @@ def main() -> None:
 
             elif action == "clear_moves":
                 _clear_motion_state()
-                log.info("Cleared moves and speech sway")
 
             elif action == "wiggle":
                 robot.goto_target(antennas=[0.5, -0.5], duration=0.5)

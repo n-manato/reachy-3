@@ -11,3 +11,9 @@ wheels/
 
 # Environment secrets
 .env
+
+# Logs
+*.log
+
+# Generated speech-audio cache (web display transcodes WAV->MP3 on demand)
+output/**/*.mp3

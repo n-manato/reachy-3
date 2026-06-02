@@ -1,0 +1,657 @@
+"""WebDisplayManager — drives the browser exhibit UI.
+
+A drop-in replacement for ``displays.manager.DisplayManager``: it exposes the
+same high-level methods the playback loop calls (``play_video``,
+``wait_until_near_end_and_pause``, ``show_topic``, ``show_subtitle``,
+``finish_subtitle``, ``point_to``, ``load_video``, ``pump_events_forever``,
+``close``) but, instead of manipulating Qt widgets, it serves web pages and
+pushes declarative state to the connected browsers over WebSocket.
+
+It runs a uvicorn server as a task on the *same* asyncio loop as the playback
+loop, so no extra threads are involved. All UI methods are synchronous and just
+update state + enqueue messages for the connected sockets — exactly the calling
+contract the existing loop already relies on.
+
+Audio is unchanged: robot-speech wavs still play on the server (sounddevice /
+robot speakers) via ``player.py``. The browser only shows the visuals, and the
+audio-reactive orb is driven by a server-side level streamer reading the same
+wav, so it stays in sync with what the audience hears.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+import socket
+from pathlib import Path
+
+import numpy as np
+import uvicorn
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse, Response
+from scipy.io import wavfile
+
+from ethics_podcast.displays import theme
+from ethics_podcast.web_display import pages
+
+logger = logging.getLogger(__name__)
+
+# Browser speech audio is transcoded from the source WAV to MP3 before being
+# served. The uncompressed 24 kHz int16 WAV is ~1-3 MB per turn; an MP3 at this
+# bitrate is roughly 1/8 the size. On a shared/contended Wi-Fi link this removes
+# the bandwidth spike that coincided with the robot control-link drops. The WAV
+# is kept on disk for the server-side audio-level meter.
+try:
+    import lameenc  # noqa: F401
+
+    _MP3_AVAILABLE = True
+except Exception:  # pragma: no cover - optional dependency
+    _MP3_AVAILABLE = False
+
+# Mono speech bitrate (kbps). Tune at the exhibit via DISPLAY_SPEECH_BITRATE.
+SPEECH_WEB_BITRATE_KBPS = int(os.environ.get("DISPLAY_SPEECH_BITRATE", "48"))
+
+
+def _encode_wav_to_mp3(wav_path: Path, mp3_path: Path, bitrate_kbps: int) -> bool:
+    """Transcode a WAV file to MP3, writing atomically. Returns True on success.
+
+    Kept module-level (no ``self``) so it can run in a thread executor without
+    touching loop-owned state.
+    """
+    try:
+        import lameenc
+
+        rate, data = wavfile.read(wav_path)
+    except Exception:
+        return False
+
+    # Normalise to int16 PCM, the format lameenc expects.
+    if data.dtype == np.int16:
+        pass
+    elif data.dtype in (np.float32, np.float64):
+        data = (np.clip(data, -1.0, 1.0) * 32767.0).astype(np.int16)
+    elif data.dtype == np.int32:
+        data = (data >> 16).astype(np.int16)
+    else:
+        data = data.astype(np.int16)
+
+    channels = 1 if data.ndim == 1 else int(data.shape[1])
+
+    try:
+        encoder = lameenc.Encoder()
+        encoder.set_bit_rate(bitrate_kbps)
+        encoder.set_in_sample_rate(int(rate))
+        encoder.set_channels(channels)
+        encoder.set_quality(2)  # 0=best/slowest .. 9=worst/fastest
+        mp3 = encoder.encode(np.ascontiguousarray(data).tobytes())
+        mp3 += encoder.flush()
+    except Exception:
+        return False
+
+    try:
+        tmp = mp3_path.with_suffix(mp3_path.suffix + ".tmp")
+        tmp.write_bytes(mp3)
+        tmp.replace(mp3_path)
+    except Exception:
+        return False
+
+    return True
+
+
+ROLES = ("student", "professor", "moderator")
+CHANNELS = ("top", *ROLES)
+ICON_PATHS = {
+    "student": Path("picture/Bentham.png"),
+    "professor": Path("picture/korsgaard.jpg"),
+    "moderator": Path("picture/Aquinas.jpg"),
+}
+SPEECH_PAN = {
+    "student": -0.85,
+    "professor": 0.0,
+    "moderator": 0.85,
+}
+
+# How long to wait for the browser to report a video has ended before the
+# playback loop gives up and moves on (in case no top display is connected).
+VIDEO_END_TIMEOUT = 1800.0
+
+
+def _local_ip() -> str:
+    """Best-effort LAN IP of this machine (no traffic is actually sent)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def _local_hostname() -> str:
+    """Best-effort hostname users can try on the same LAN."""
+    try:
+        return socket.gethostname()
+    except Exception:
+        return "localhost"
+
+
+class WebDisplayManager:
+    """Coordinates the four browser displays as one unit, over WebSocket."""
+
+    plays_speech_audio = True
+
+    def __init__(
+        self,
+        video_path: Path | None = None,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        # Accepted for signature parity with DisplayManager; unused here.
+        top_monitor: int = 0,
+        mini_monitors: tuple[int, int, int] = (1, 2, 3),
+        test_mode: bool = False,
+    ):
+        self.host = host
+        self.port = port
+        self.video_path: Path | None = Path(video_path) if video_path else None
+        self.speech_audio_path: Path | None = None
+        # Serialises lazy WAV->MP3 transcodes for the browser speech stream.
+        self._speech_encode_lock = asyncio.Lock()
+
+        # Connected browser send-queues, grouped by channel.
+        self._conns: dict[str, set[asyncio.Queue]] = {c: set() for c in CHANNELS}
+        # Last full "state" message per channel, replayed to new connections.
+        self._latest: dict[str, dict] = {}
+
+        # Declarative view-models.
+        self._top = {
+            "type": "state",
+            "mode": "topic",
+            "videoSrc": "",
+            "videoEpoch": 0,
+            "speechAudioSrc": "",
+            "speechAudioEpoch": 0,
+            "speechPan": 0.0,
+            "title": "",
+            "topic": "",
+            "current": None,
+            "next": None,
+        }
+        self._mini = {
+            r: {"type": "state", "role": r, "state": "idle", "text": "", "gazeDir": 0}
+            for r in ROLES
+        }
+        self._video_token = 0
+
+        # Per-role audio-level streaming tasks.
+        self._level_tasks: dict[str, asyncio.Task | None] = {r: None for r in ROLES}
+
+        # Set when a top browser reports the current video ended.
+        self._video_ended = asyncio.Event()
+
+        self._loop = asyncio.get_event_loop()
+        self.app = self._build_app()
+        self._server: uvicorn.Server | None = None
+        self._server_task = self._loop.create_task(self._serve())
+
+        if self.video_path is not None:
+            self.load_video(self.video_path)
+
+        # Seed the latest-state cache so a page opened before any event still
+        # renders correctly (idle minis, topic/blank top) on first connect.
+        self._broadcast_top()
+        for role in ROLES:
+            self._broadcast_mini(role)
+
+        self._print_urls()
+
+    # ── Server lifecycle ──────────────────────────────────────────────────────
+
+    def _print_urls(self) -> None:
+        ip = _local_ip()
+        hostname = _local_hostname()
+        print("\n  [web] Exhibit UI served on the local network:")
+        for path in ("top", *ROLES, "all"):
+            print(f"    http://{ip}:{self.port}/{path}")
+        if hostname and hostname not in {ip, "localhost"}:
+            print("    PC-name URLs you can also try:")
+            for path in ("top", *ROLES, "all"):
+                print(f"    http://{hostname}:{self.port}/{path}")
+        print("    (any computer on the same LAN can open these)\n")
+
+    async def _serve(self) -> None:
+        config = uvicorn.Config(
+            self.app,
+            host=self.host,
+            port=self.port,
+            log_level="warning",
+            # We don't use ASGI lifespan events; disabling it avoids a noisy
+            # CancelledError traceback when the server task is torn down.
+            lifespan="off",
+        )
+        self._server = uvicorn.Server(config)
+        # Running inside an existing loop — don't let uvicorn grab signals.
+        self._server.install_signal_handlers = lambda: None
+        try:
+            await self._server.serve()
+        except asyncio.CancelledError:
+            pass
+
+    def _build_app(self) -> FastAPI:
+        app = FastAPI()
+
+        @app.get("/", response_class=HTMLResponse)
+        async def index(request: Request) -> str:
+            self._log_http_hit("/", request)
+            return pages.page_index([f"/{p}" for p in ("top", *ROLES, "all")])
+
+        @app.get("/top", response_class=HTMLResponse)
+        async def top(request: Request) -> str:
+            self._log_http_hit("/top", request)
+            return pages.page_top()
+
+        @app.get("/all", response_class=HTMLResponse)
+        async def all_page(request: Request) -> str:
+            self._log_http_hit("/all", request)
+            return pages.page_all()
+
+        @app.get("/student", response_class=HTMLResponse)
+        async def student(request: Request) -> str:
+            self._log_http_hit("/student", request)
+            return pages.page_mini("student")
+
+        @app.get("/professor", response_class=HTMLResponse)
+        async def professor(request: Request) -> str:
+            self._log_http_hit("/professor", request)
+            return pages.page_mini("professor")
+
+        @app.get("/moderator", response_class=HTMLResponse)
+        async def moderator(request: Request) -> str:
+            self._log_http_hit("/moderator", request)
+            return pages.page_mini("moderator")
+
+        @app.get("/icon/{role}")
+        async def icon(role: str) -> Response:
+            path = ICON_PATHS.get(role)
+            if path is None or not path.exists():
+                return Response(status_code=404)
+            return FileResponse(str(path))
+
+        @app.get("/video/current")
+        async def video_current(request: Request) -> Response:
+            if self.video_path is None or not self.video_path.exists():
+                self._log_media_hit("/video/current", request, missing=True)
+                return Response(status_code=404)
+            self._log_media_hit("/video/current", request)
+            # FileResponse handles HTTP range requests (seeking) for us.
+            return FileResponse(str(self.video_path))
+
+        @app.get("/speech/current")
+        async def speech_current(request: Request) -> Response:
+            wav = self.speech_audio_path
+            if wav is None or not wav.exists():
+                self._log_media_hit("/speech/current", request, missing=True)
+                return Response(status_code=404)
+            # Serve a small MP3 instead of the multi-MB WAV when possible.
+            served = await self._get_web_audio(wav)
+            self._log_media_hit("/speech/current", request)
+            return FileResponse(str(served))
+
+        @app.websocket("/ws/{channel}")
+        async def ws(websocket: WebSocket, channel: str) -> None:
+            if channel not in CHANNELS:
+                await websocket.close()
+                return
+            await self._ws_endpoint(websocket, channel)
+
+        return app
+
+    def _log_http_hit(self, path: str, request: Request) -> None:
+        client = request.client.host if request.client else "unknown"
+        print(f"  [web] HTTP {path} from {client}")
+
+    def _log_media_hit(
+        self, path: str, request: Request, missing: bool = False
+    ) -> None:
+        client = request.client.host if request.client else "unknown"
+        range_header = request.headers.get("range", "no-range")
+        status = "missing" if missing else "ok"
+        print(
+            f"  [web] MEDIA {path} {status} from {client} "
+            f"range={range_header}"
+        )
+
+    @staticmethod
+    def _mp3_fresh(mp3_path: Path, wav_path: Path) -> bool:
+        """True if a non-empty MP3 cache exists and is newer than its WAV."""
+        try:
+            return (
+                mp3_path.exists()
+                and mp3_path.stat().st_size > 0
+                and mp3_path.stat().st_mtime >= wav_path.stat().st_mtime
+            )
+        except OSError:
+            return False
+
+    async def _get_web_audio(self, wav: Path) -> Path:
+        """Return a compressed (MP3) copy of ``wav`` for the browser.
+
+        Transcodes lazily and caches the result next to the WAV. Falls back to
+        the original WAV if MP3 encoding is unavailable or fails, so audio is
+        never lost — only made smaller when possible.
+        """
+        if not _MP3_AVAILABLE:
+            return wav
+
+        mp3 = wav.with_suffix(".mp3")
+        if self._mp3_fresh(mp3, wav):
+            return mp3
+
+        async with self._speech_encode_lock:
+            # Re-check inside the lock in case another request just built it.
+            if self._mp3_fresh(mp3, wav):
+                return mp3
+            loop = asyncio.get_event_loop()
+            ok = await loop.run_in_executor(
+                None, _encode_wav_to_mp3, wav, mp3, SPEECH_WEB_BITRATE_KBPS
+            )
+            if ok and self._mp3_fresh(mp3, wav):
+                try:
+                    wav_kb = wav.stat().st_size / 1024
+                    mp3_kb = mp3.stat().st_size / 1024
+                    print(
+                        f"  [web] speech encoded {wav.name}: "
+                        f"{wav_kb:.0f}KB WAV -> {mp3_kb:.0f}KB MP3 "
+                        f"@{SPEECH_WEB_BITRATE_KBPS}kbps"
+                    )
+                except OSError:
+                    pass
+                return mp3
+            return wav
+
+    async def _ws_endpoint(self, websocket: WebSocket, channel: str) -> None:
+        await websocket.accept()
+        queue: asyncio.Queue = asyncio.Queue()
+        self._conns[channel].add(queue)
+        client = websocket.client.host if websocket.client else "unknown"
+        print(f"  [web] WS connected: {channel} from {client}")
+        disconnect_reason = "normal"
+
+        # Replay the latest known state so a freshly-opened page is correct.
+        last = self._latest.get(channel)
+        if last is not None:
+            await websocket.send_json(last)
+
+        async def sender() -> None:
+            try:
+                while True:
+                    msg = await queue.get()
+                    await websocket.send_json(msg)
+            except (asyncio.CancelledError, WebSocketDisconnect, RuntimeError):
+                pass
+
+        send_task = asyncio.create_task(sender())
+        try:
+            while True:
+                msg = await websocket.receive_json()
+                self._handle_client_msg(channel, msg)
+        # CancelledError (BaseException) is raised when the server task is torn
+        # down at shutdown — swallow it here so uvicorn doesn't log a traceback.
+        except WebSocketDisconnect as e:
+            disconnect_reason = f"websocket_disconnect code={getattr(e, 'code', None)}"
+        except RuntimeError as e:
+            disconnect_reason = f"runtime_error {e}"
+        except asyncio.CancelledError:
+            disconnect_reason = "server_cancelled"
+            pass
+        except Exception as e:  # pragma: no cover
+            disconnect_reason = f"exception {type(e).__name__}: {e}"
+            logger.debug("ws error on %s: %s", channel, e)
+        finally:
+            send_task.cancel()
+            self._conns[channel].discard(queue)
+            print(
+                f"  [web] WS disconnected: {channel} from {client} "
+                f"reason={disconnect_reason}"
+            )
+
+    def _handle_client_msg(self, channel: str, msg: dict) -> None:
+        if channel == "top" and msg.get("type") == "video_ended":
+            current_time = msg.get("currentTime")
+            duration = msg.get("duration")
+            print(
+                "  [web] top reported video ended"
+                f" current={current_time} duration={duration}"
+            )
+            self._video_ended.set()
+
+    # ── Broadcasting ──────────────────────────────────────────────────────────
+
+    def _push(self, channel: str, msg: dict) -> None:
+        for queue in self._conns[channel]:
+            queue.put_nowait(msg)
+
+    def _broadcast_top(self) -> None:
+        self._top["videoSrc"] = (
+            f"/video/current?token={self._video_token}" if self.video_path else ""
+        )
+        self._top["speechAudioSrc"] = (
+            f"/speech/current?token={self._top['speechAudioEpoch']}"
+            if self.speech_audio_path
+            else ""
+        )
+        msg = dict(self._top)
+        self._latest["top"] = msg
+        self._push("top", msg)
+
+    def _broadcast_mini(self, role: str) -> None:
+        msg = dict(self._mini[role])
+        self._latest[role] = msg
+        self._push(role, msg)
+
+    # ── Video (top display) ────────────────────────────────────────────────────
+
+    def load_video(self, video_path: Path) -> None:
+        self.video_path = Path(video_path)
+        self._video_token += 1
+        print(f"  [web] load_video token={self._video_token} path={self.video_path}")
+        # Prime the next clip without starting playback yet. The browser should
+        # only enter video mode when play_video() is called, otherwise a fresh
+        # connection can begin playback twice and abort the first request.
+        self._top["mode"] = "topic"
+        self._broadcast_top()
+
+    def play_video(self) -> None:
+        self._video_ended.clear()
+        self._top["mode"] = "video"
+        self._top["videoEpoch"] += 1
+        print(
+            f"  [web] play_video epoch={self._top['videoEpoch']} "
+            f"token={self._video_token} top_conns={len(self._conns['top'])}"
+        )
+        self._broadcast_top()
+        # Minis sit idle while the video plays.
+        for role in ROLES:
+            self._set_mini_idle(role)
+
+    async def wait_for_connection(
+        self, channel: str = "top", timeout: float = 30.0
+    ) -> bool:
+        """Wait until at least one browser is connected to ``channel``.
+
+        Lets a caller hold off starting the video until the top display page is
+        actually open, so the video stage is never missed. Returns True if a
+        connection arrived, False on timeout.
+        """
+        deadline = self._loop.time() + timeout
+        while self._loop.time() < deadline:
+            if self._conns.get(channel):
+                return True
+            await asyncio.sleep(0.2)
+        connected = bool(self._conns.get(channel))
+        if not connected:
+            print(
+                f"  [web] WARNING: no /{channel} WebSocket connected after "
+                f"{timeout:.0f}s. Open the IP URL exactly as printed above "
+                "(PC-name URLs may resolve to the wrong network adapter)."
+            )
+        return connected
+
+    async def wait_until_near_end_and_pause(self) -> None:
+        if self.video_path is None:
+            return
+        if not any(self._conns["top"]):
+            print("  [web] No top display connected — waiting for the video to end.")
+        try:
+            await asyncio.wait_for(self._video_ended.wait(), timeout=VIDEO_END_TIMEOUT)
+            print(
+                f"  [web] video wait completed epoch={self._top['videoEpoch']} "
+                f"top_conns={len(self._conns['top'])}"
+            )
+        except asyncio.TimeoutError:
+            print("  [web] WARNING: timed out waiting for the video to end.")
+
+    # ── Presentation flow ──────────────────────────────────────────────────────
+
+    def show_topic(self, title: str, topic: str) -> None:
+        self._top.update(mode="topic", title=title, topic=topic, current=None, next=None)
+        self._broadcast_top()
+        for role in ROLES:
+            self._set_mini_idle(role)
+
+    def point_to(self, next_role: str | None) -> None:
+        self._top["current"] = None
+        self._top["next"] = next_role
+        self._broadcast_top()
+        for role in ROLES:
+            if next_role is None or role == next_role:
+                self._set_mini_idle(role)
+            else:
+                self._set_mini_gaze(role, theme.gaze_direction(role, next_role))
+
+    def show_subtitle(
+        self,
+        role: str,
+        text: str,
+        turn_number: int | None = None,
+        audio_path: str | Path | None = None,
+    ) -> None:
+        if audio_path is not None and Path(audio_path).exists():
+            self.speech_audio_path = Path(audio_path)
+            self._top["speechAudioEpoch"] += 1
+            self._top["speechPan"] = SPEECH_PAN.get(role, 0.0)
+            # Warm the MP3 cache off-loop so the browser's fetch hits a ready
+            # file instead of waiting on the transcode.
+            self._loop.create_task(self._get_web_audio(self.speech_audio_path))
+        self._top["current"] = role
+        self._top["next"] = None
+        self._broadcast_top()
+
+        for r in ROLES:
+            if r == role:
+                self._set_mini_speaking(r, text, audio_path)
+            else:
+                self._set_mini_idle(r)
+
+    def finish_subtitle(self, role: str, next_role: str | None = None) -> None:
+        self._set_mini_idle(role)
+        self.point_to(next_role)
+
+    # ── Mini state helpers ──────────────────────────────────────────────────────
+
+    def _set_mini_speaking(
+        self, role: str, text: str, audio_path: str | Path | None
+    ) -> None:
+        self._stop_level(role)
+        self._mini[role].update(state="speaking", text=text, gazeDir=0)
+        self._broadcast_mini(role)
+        self._start_level(role, audio_path)
+
+    def _set_mini_idle(self, role: str) -> None:
+        self._stop_level(role)
+        self._mini[role].update(state="idle", gazeDir=0)
+        self._broadcast_mini(role)
+
+    def _set_mini_gaze(self, role: str, direction: int) -> None:
+        self._stop_level(role)
+        self._mini[role].update(state="gaze", gazeDir=int(direction))
+        self._broadcast_mini(role)
+
+    # ── Audio-level streaming (drives the mini audio orb, server-side) ──────────
+
+    def _start_level(self, role: str, audio_path: str | Path | None) -> None:
+        if audio_path is None:
+            return
+        path = Path(audio_path)
+        if not path.exists():
+            return
+        self._level_tasks[role] = self._loop.create_task(
+            self._stream_levels(role, path)
+        )
+
+    def _stop_level(self, role: str) -> None:
+        task = self._level_tasks.get(role)
+        if task is not None and not task.done():
+            task.cancel()
+        self._level_tasks[role] = None
+
+    async def _stream_levels(self, role: str, path: Path) -> None:
+        """Read the wav and push 0..1 levels timed off the wall clock.
+
+        Mirrors displays/audio_level.WavAudioLevelFollower so the browser bar
+        matches the Qt version (and the audio the audience hears).
+        """
+        try:
+            rate, data = wavfile.read(path)
+        except Exception:
+            return
+
+        if data.ndim > 1:
+            data = data.mean(axis=1)
+        if data.dtype == np.int16:
+            data = data.astype(np.float32) / 32768.0
+        elif data.dtype == np.int32:
+            data = data.astype(np.float32) / 2147483648.0
+        else:
+            data = data.astype(np.float32)
+
+        rate = int(rate)
+        window = max(1, int(rate * 0.045))
+        start = self._loop.time()
+        try:
+            while True:
+                elapsed = self._loop.time() - start
+                center = int(elapsed * rate)
+                lo = max(0, center - window // 2)
+                hi = min(len(data), center + window // 2)
+                if lo >= hi:
+                    break
+                chunk = data[lo:hi]
+                rms = float(np.sqrt(np.mean(chunk * chunk) + 1e-12))
+                level = min(1.0, rms * 10.0)
+                if level > 0.01:
+                    level = max(level, 0.12)
+                self._push(role, {"type": "level", "value": level})
+                await asyncio.sleep(1 / 30)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            self._push(role, {"type": "level", "value": 0.0})
+
+    # ── Event-loop integration (no-ops; the browser does its own rendering) ─────
+
+    def process_events(self) -> None:
+        pass
+
+    async def pump_events_forever(self, stop: asyncio.Event) -> None:
+        await stop.wait()
+
+    def close(self) -> None:
+        for role in ROLES:
+            self._stop_level(role)
+        if self._server is not None:
+            self._server.should_exit = True
+        if self._server_task is not None:
+            self._server_task.cancel()
+        print("  [web] Display server stopping.")

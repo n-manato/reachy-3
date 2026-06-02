@@ -43,6 +43,11 @@ class RobotController:
         self.name = name
         self.role = role
         self.use_media = use_media
+        self._process: subprocess.Popen | None = None
+        self._output_rate = 16000
+        self._audio_ready = False
+        self._restart_attempts = 0
+        self._last_reported_exit_pid: int | None = None
 
         self._last_pose_command: str | None = None
         self._last_pose_time: float = 0.0
@@ -88,6 +93,7 @@ class RobotController:
             self._output_rate = int(parts[1]) if len(parts) > 1 else 16000
             self._audio_ready = parts[2] == "True" if len(parts) > 2 else False
             self._restart_attempts = 0
+            self._last_reported_exit_pid = None
 
             logger.info(
                 "Robot %s ready (output_rate=%d, audio=%s).",
@@ -130,6 +136,17 @@ class RobotController:
         """Return True if the worker subprocess is still running."""
         return self._process is not None and self._process.poll() is None
 
+    def diagnostic_status(self) -> str:
+        """Return a compact status string for timeline diagnostics."""
+        if self._process is None:
+            return f"{self.role}:no-process"
+
+        code = self._process.poll()
+        if code is None:
+            return f"{self.role}:alive pid={self._process.pid}"
+
+        return f"{self.role}:exited pid={self._process.pid} code={code}"
+
     def restart(self) -> None:
         """Restart the worker subprocess after a connection loss."""
         logger.warning("Restarting robot %s worker...", self.role)
@@ -141,9 +158,11 @@ class RobotController:
 
         self._restart_attempts += 1
 
-        # Backoff so the robot daemon has time to recover.
-        delay = min(2.0 * self._restart_attempts, 8.0)
-        time.sleep(delay)
+        # Small fixed backoff so a flaky robot recovers fast without a long
+        # on-screen freeze. The reconnect itself already takes ~4s, so an
+        # escalating backoff (previously up to 8s) only made repeated drops
+        # look worse without helping the daemon recover.
+        time.sleep(1.0)
 
         self.start()
 
@@ -152,6 +171,18 @@ class RobotController:
     def ensure_alive(self) -> None:
         """Restart the worker if it has exited."""
         if not self.is_alive():
+            if self._process is not None:
+                pid = self._process.pid
+                code = self._process.poll()
+                if self._last_reported_exit_pid != pid:
+                    logger.error(
+                        "Robot %s worker is not alive before command "
+                        "(pid=%s, exit_code=%s).",
+                        self.role,
+                        pid,
+                        code,
+                    )
+                    self._last_reported_exit_pid = pid
             self.restart()
 
     def _send(self, action: str, kwargs: dict) -> None:
@@ -428,6 +459,7 @@ async def prepare_robots_for_turn(
             controller.queue_speaking_ready_pose(duration=ready_duration)
         else:
             controller.queue_power_off_pose(duration=off_duration)
+        await asyncio.sleep(0.12)
 
     # Wait until the face/head/antennas are back before starting the next motion.
     await asyncio.sleep(max(ready_duration, off_duration) + 0.25)
@@ -436,10 +468,13 @@ async def prepare_robots_for_turn(
 async def connect_robots(
     *configs: Any,
     use_media: bool = False,
+    allow_partial: bool = True,
 ) -> tuple[RobotController, ...]:
     """Start robot subprocesses simultaneously.
 
-    Works with 2 robots or 3 robots.
+    Works with 2 robots or 3 robots. When ``allow_partial`` is true, robots
+    that fail to connect are replaced with MockRobot so the exhibit can still
+    run with the robots that are available.
     """
     controllers = [
         RobotController(
@@ -453,11 +488,43 @@ async def connect_robots(
 
     loop = asyncio.get_running_loop()
 
-    await asyncio.gather(
+    results = await asyncio.gather(
         *[
             loop.run_in_executor(None, controller.start)
             for controller in controllers
-        ]
+        ],
+        return_exceptions=allow_partial,
     )
 
-    return tuple(controllers)
+    if not allow_partial:
+        return tuple(controllers)
+
+    active = []
+    for config, controller, result in zip(configs, controllers, results):
+        if isinstance(result, Exception):
+            logger.warning(
+                "Robot %s (%s) could not connect: %s. Using mock fallback.",
+                config.role,
+                getattr(config, "host", "?"),
+                result,
+            )
+            try:
+                controller.stop()
+            except Exception:
+                pass
+
+            from ethics_podcast.mock_robot import MockRobot
+
+            active.append(MockRobot(config.role, getattr(config, "name", None)))
+        else:
+            active.append(controller)
+
+    connected = sum(isinstance(robot, RobotController) for robot in active)
+    if connected < len(active):
+        logger.warning(
+            "Running with %d real robot(s) and %d mock fallback(s).",
+            connected,
+            len(active) - connected,
+        )
+
+    return tuple(active)

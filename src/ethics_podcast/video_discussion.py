@@ -25,13 +25,26 @@ from pathlib import Path
 from ethics_podcast.generator import run_generate_video_discussion
 from ethics_podcast.player import AudioMode, run_playback_with_connected_robots
 from ethics_podcast.robot_controller import connect_robots
+
+ENABLE_PRE_VIDEO_HEAD_POSTURE = False
 from ethics_podcast.video_window import ControlledVideoWindow
+
+
+def _prefer_existing(*paths: str) -> Path:
+    for value in paths:
+        path = Path(value)
+        if path.exists():
+            return path
+    return Path(paths[0])
 
 
 VIDEO_ITEMS = [
     {
         "title": "AI and the Environment",
-        "video_path": Path("videos/Aiden_Environment_Video.mp4"),
+        "video_path": _prefer_existing(
+            "videos/Aiden_Environment_Video.mp4",
+            "videos/Aiden_Environment_Video.webm",
+        ),
         "transcript_path": Path("transcripts/Aiden_Environment_Video.txt"),
         "playback_session": "video_environment",
         "topic": (
@@ -41,7 +54,10 @@ VIDEO_ITEMS = [
     },
     {
         "title": "AI and the Military",
-        "video_path": Path("videos/Aiden_Military_Video.mp4"),
+        "video_path": _prefer_existing(
+            "videos/Aiden_Military_Video.mp4",
+            "videos/Aiden_Military_Video.webm",
+        ),
         "transcript_path": Path("transcripts/Aiden_Military_Video.txt"),
         "playback_session": "video_military",
         "topic": (
@@ -51,7 +67,10 @@ VIDEO_ITEMS = [
     },
     {
         "title": "AI and Relationships",
-        "video_path": Path("videos/Aiden_Relationship_Video.mp4"),
+        "video_path": _prefer_existing(
+            "videos/Aiden_Relationship_Video.mp4",
+            "videos/Aiden_Relationship_Video.webm",
+        ),
         "transcript_path": Path("transcripts/Aiden_Relationship_Video.txt"),
         "playback_session": "video_relationship",
         "topic": (
@@ -61,7 +80,10 @@ VIDEO_ITEMS = [
     },
     {
         "title": "AI and Human Achievement",
-        "video_path": Path("videos/Aiden_Achievment_video.mp4"),
+        "video_path": _prefer_existing(
+            "videos/Aiden_Achievment_video.mp4",
+            "videos/Aiden_Achievment_video.webm",
+        ),
         "transcript_path": Path("transcripts/Aiden_Achievment_video.txt"),
         "playback_session": "video_achievement",
         "topic": (
@@ -332,8 +354,11 @@ async def reset_then_power_off_all(robot_a, robot_b, robot_c) -> None:
         robot.set_speech_offsets(0, 0, 0, 0, 0, 0)
         await asyncio.sleep(0.08)
 
+    if not ENABLE_PRE_VIDEO_HEAD_POSTURE:
+        return
+
     # 3. Return to front-facing ready pose one by one.
-    ready_duration = 0.8
+    ready_duration = 1.35
 
     for robot in robots:
         robot.queue_speaking_ready_pose(duration=ready_duration)
@@ -352,7 +377,7 @@ async def reset_then_power_off_all(robot_a, robot_b, robot_c) -> None:
         await asyncio.sleep(0.08)
 
     # 5. Lower into power-off-like pose one by one.
-    off_duration = 1.0
+    off_duration = 1.6
 
     for robot in robots:
         robot.queue_power_off_pose(duration=off_duration)

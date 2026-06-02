@@ -45,6 +45,22 @@ class Config:
     inter_turn_pause: float = 1.0
     max_response_tokens: int = 200
 
+    # Multi-display exhibit layout
+    display_top_monitor: int = 0
+    # Monitor index per role, in (student, professor, moderator) order.
+    display_mini_monitors: tuple[int, int, int] = (1, 2, 3)
+    # When True (or when too few monitors are connected) all four windows
+    # are tiled on the primary screen so the flow can be tested on one machine.
+    display_test_mode: bool = False
+
+    # Display backend for the Multi-Display Exhibit:
+    #   "qt"  — four native PySide6 windows on locally-attached monitors
+    #   "web" — browser pages served over the LAN (one per display)
+    display_backend: str = "qt"
+    # Host/port for the "web" backend. 0.0.0.0 = reachable from any LAN device.
+    display_web_host: str = "0.0.0.0"
+    display_web_port: int = 8000
+
     @classmethod
     def from_env(cls) -> "Config":
         api_key = os.environ.get("OPENAI_API_KEY", "")
@@ -84,4 +100,35 @@ class Config:
             ),
 
             inter_turn_pause=float(os.environ.get("INTER_TURN_PAUSE", "1.0")),
+
+            display_top_monitor=int(os.environ.get("DISPLAY_TOP_MONITOR", "0")),
+            display_mini_monitors=_parse_mini_monitors(
+                os.environ.get("DISPLAY_MINI_MONITORS", "1,2,3")
+            ),
+            display_test_mode=_parse_bool(
+                os.environ.get("DISPLAY_TEST_MODE", "false")
+            ),
+            display_backend=os.environ.get("DISPLAY_BACKEND", "qt").strip().lower(),
+            display_web_host=os.environ.get("DISPLAY_WEB_HOST", "0.0.0.0"),
+            display_web_port=int(os.environ.get("DISPLAY_WEB_PORT", "8000")),
         )
+
+
+def _parse_bool(value: str) -> bool:
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _parse_mini_monitors(value: str) -> tuple[int, int, int]:
+    """Parse '1,2,3' into a 3-tuple of monitor indices (student/prof/mod)."""
+    try:
+        parts = [int(p.strip()) for p in value.split(",") if p.strip() != ""]
+    except ValueError:
+        parts = []
+
+    if len(parts) >= 3:
+        return (parts[0], parts[1], parts[2])
+
+    # Pad/fallback so we always return three indices.
+    defaults = [1, 2, 3]
+    parts = (parts + defaults)[:3]
+    return (parts[0], parts[1], parts[2])
