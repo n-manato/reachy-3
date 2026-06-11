@@ -11,7 +11,7 @@ Phases:
   0. Setup — discover robots, assign roles, and refresh IPs
   1. Generate — runs the AI conversation, saves audio + transcripts to disk
   2. Play    — plays the saved conversation through the robots
-  3. Restart & Wake — restarts daemons, wakes robots, verifies audio works
+  3. Power OFF/ON & Wake — stops daemons, starts them again, wakes robots
   4. Exit
 """
 
@@ -385,6 +385,136 @@ def _print_discovered_robot_dashboards(robots_info: list[dict]) -> None:
         print(f"    {i + 1}. {name}: http://{ip}:8000")
 
 
+def _power_cycle_and_wake_robots(config: Config) -> None:
+    """Turn configured robot daemons off, then on, and print status URLs."""
+    import concurrent.futures
+
+    targets = [
+        ("Bentham-Bot / Left", config.robot_a.name, config.robot_a.host),
+        ("Korsgaard-Bot / Center", config.robot_b.name, config.robot_b.host),
+        ("Aquinas-Bot / Right", config.robot_c.name, config.robot_c.host),
+    ]
+
+    by_host: dict[str, list[tuple[str, str | None]]] = {}
+    for label, name, host in targets:
+        by_host.setdefault(host, []).append((label, name))
+
+    print("\n  Turning configured robots OFF, then ON:")
+    for host, roles in by_host.items():
+        role_text = ", ".join(
+            f"{label} ({name or '?'})" for label, name in roles
+        )
+        print(f"    {role_text}: http://{host}:8000")
+        if len(roles) > 1:
+            print(f"      WARNING: multiple roles use the same host {host}; toggling once.")
+
+    def _run_one(host: str) -> tuple[str, bool, str]:
+        base = f"http://{host}:8000/api"
+
+        try:
+            status = requests.get(f"{base}/daemon/status", timeout=5)
+            status.raise_for_status()
+
+            stop_resp = requests.post(
+                f"{base}/daemon/stop",
+                params={"goto_sleep": "true"},
+                timeout=10,
+            )
+            if stop_resp.status_code != 409:
+                stop_resp.raise_for_status()
+
+            stop_deadline = time.monotonic() + 30.0
+            while True:
+                try:
+                    status = requests.get(f"{base}/daemon/status", timeout=5)
+                    if status.status_code == 200:
+                        state = str((status.json() or {}).get("state", "unknown"))
+                        if state in ("stopped", "not_initialized"):
+                            break
+                except Exception:
+                    pass
+
+                if time.monotonic() >= stop_deadline:
+                    break
+
+                time.sleep(1.0)
+
+            time.sleep(2.0)
+
+            start_resp = requests.post(
+                f"{base}/daemon/start",
+                params={"wake_up": "true"},
+                timeout=10,
+            )
+            if start_resp.status_code != 409:
+                start_resp.raise_for_status()
+
+            time.sleep(2.0)
+
+            media_resp = requests.post(f"{base}/media/acquire", timeout=10)
+            if media_resp.status_code != 409:
+                media_resp.raise_for_status()
+
+            deadline = time.monotonic() + 60.0
+            motor_text = "unknown"
+            media_text = "unknown"
+
+            while True:
+                try:
+                    motors = requests.get(f"{base}/motors/status", timeout=5)
+                    if motors.status_code == 200:
+                        motor_text = str(
+                            (motors.json() or {}).get("mode", "unknown")
+                        )
+                        break
+                except Exception:
+                    pass
+
+                if time.monotonic() >= deadline:
+                    break
+
+                time.sleep(1.0)
+
+            requests.post(
+                f"{base}/motors/set_mode/enabled",
+                timeout=5,
+            ).raise_for_status()
+            requests.post(
+                f"{base}/move/play/wake_up",
+                timeout=5,
+            ).raise_for_status()
+            time.sleep(3.0)
+
+            status = requests.get(f"{base}/daemon/status", timeout=5)
+            status.raise_for_status()
+            state = str((status.json() or {}).get("state", "unknown"))
+
+            motors = requests.get(f"{base}/motors/status", timeout=5)
+            if motors.status_code == 200:
+                motor_text = str((motors.json() or {}).get("mode", "unknown"))
+
+            media_status = requests.get(f"{base}/media/status", timeout=5)
+            if media_status.status_code == 200:
+                media = media_status.json() or {}
+                media_text = (
+                    f"available={media.get('available')}, "
+                    f"released={media.get('released')}, "
+                    f"no_media={media.get('no_media')}"
+                )
+
+            return host, True, f"daemon={state}, motors={motor_text}, media={media_text}"
+        except Exception as e:
+            return host, False, str(e)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(by_host)) as pool:
+        futures = [pool.submit(_run_one, host) for host in by_host]
+
+        for future in concurrent.futures.as_completed(futures):
+            host, ok, detail = future.result()
+            prefix = "OK" if ok else "FAILED"
+            print(f"    {prefix}: http://{host}:8000 ({detail})")
+
+
 def _auto_assign_robots(config: Config) -> Config | None:
     """Discover robots and refresh their IPs in .env, no manual identification.
 
@@ -750,7 +880,7 @@ def main() -> None:
         print("0. Setup, Discover, assign & refresh robots")
         print("1. Generate Conversation")
         print("2. Play on Robots")
-        print("3. Restart & Wake Robots")
+        print("3. Power OFF/ON & Wake Robots")
         print("4. Exit")
 
         choice = _input_or_wake("\nSelect (0-4): ", wake_proc)
@@ -921,13 +1051,13 @@ def main() -> None:
             wake_proc = None
 
             try:
-                wake_proc = None
+                _power_cycle_and_wake_robots(config)
 
             except KeyboardInterrupt:
-                print("\nRestart interrupted.")
+                print("\nPower cycle interrupted.")
 
             except Exception as e:
-                logging.error("Restart failed: %s", e, exc_info=True)
+                logging.error("Power cycle failed: %s", e, exc_info=True)
 
             wake_proc = None
 
