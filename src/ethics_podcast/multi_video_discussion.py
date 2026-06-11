@@ -21,6 +21,7 @@ import asyncio
 from ethics_podcast.player import (
     AudioMode,
     run_playback_with_connected_robots,
+    start_space_key_listener,
     _diag,
     _robot_diag,
 )
@@ -121,6 +122,17 @@ async def run_multi_display_discussion_loop(
 
     display = None
 
+    # SPACE (in the terminal or any browser) toggles mute for all displays.
+    import threading
+
+    key_stop = threading.Event()
+
+    def _toggle_mute() -> None:
+        if display is not None and hasattr(display, "toggle_muted"):
+            display.toggle_muted()
+
+    start_space_key_listener(asyncio.get_running_loop(), _toggle_mute, key_stop)
+
     try:
         video_index = 0
 
@@ -213,6 +225,8 @@ async def run_multi_display_discussion_loop(
             await asyncio.sleep(2)
 
     finally:
+        key_stop.set()
+
         if display is not None:
             try:
                 display.close()

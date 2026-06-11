@@ -36,6 +36,29 @@ def _web_display_config(config: Config) -> Config:
     return replace(config, display_backend="web")
 
 
+def _emergency_cleanup() -> None:
+    """Force-stop background audio and orphaned workers after a Ctrl+C.
+
+    The async cleanup paths can be interrupted before they finish, leaving the
+    pygame BGM playing on its own SDL thread and worker subprocesses alive.
+    This runs synchronously after KeyboardInterrupt so the exhibit actually
+    goes quiet and lets go of the robots. Best-effort and exception-proof.
+    """
+    try:
+        from ethics_podcast.bgm_manager import stop_all_audio
+
+        stop_all_audio()
+    except Exception:
+        pass
+
+    try:
+        from ethics_podcast.robot_controller import kill_stale_workers
+
+        kill_stale_workers()
+    except Exception:
+        pass
+
+
 
 # ── Wake word listener ─────────────────────────────────────────────────────
 
@@ -740,9 +763,11 @@ def main() -> None:
 
             except KeyboardInterrupt:
                 print("\nPlayback stopped.")
+                _emergency_cleanup()
 
             except Exception as e:
                 logging.error("Playback failed: %s", e, exc_info=True)
+                _emergency_cleanup()
 
             wake_proc = None
 

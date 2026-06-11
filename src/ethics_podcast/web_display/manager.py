@@ -24,6 +24,7 @@ import asyncio
 import logging
 import os
 import socket
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +33,6 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from scipy.io import wavfile
 
-from ethics_podcast.displays import theme
 from ethics_podcast.web_display import pages
 
 logger = logging.getLogger(__name__)
@@ -141,6 +141,9 @@ class WebDisplayManager:
     """Coordinates the four browser displays as one unit, over WebSocket."""
 
     plays_speech_audio = True
+    # The top display can also play the looping background music (mono/centered),
+    # so all exhibit audio can come from the browser instead of the PC mixer.
+    plays_bgm_audio = True
 
     def __init__(
         self,
@@ -156,8 +159,16 @@ class WebDisplayManager:
         self.port = port
         self.video_path: Path | None = Path(video_path) if video_path else None
         self.speech_audio_path: Path | None = None
+        # Background music served to (and looped by) the top browser.
+        self.bgm_audio_path: Path | None = None
+        self._bgm_epoch = 0
         # Serialises lazy WAV->MP3 transcodes for the browser speech stream.
         self._speech_encode_lock = asyncio.Lock()
+
+        # Unique id for this program run. Every message sent to a browser is
+        # tagged with it; the client reloads itself when it sees the id change,
+        # so all already-open displays refresh automatically on each new run.
+        self._boot_id = uuid.uuid4().hex[:8]
 
         # Connected browser send-queues, grouped by channel.
         self._conns: dict[str, set[asyncio.Queue]] = {c: set() for c in CHANNELS}
@@ -173,19 +184,30 @@ class WebDisplayManager:
             "speechAudioSrc": "",
             "speechAudioEpoch": 0,
             "speechPan": 0.0,
+            "bgmSrc": "",
+            "bgmVolume": 0.18,
+            "muted": False,
             "title": "",
             "topic": "",
             "current": None,
             "next": None,
         }
-        self._mini = {
-            r: {"type": "state", "role": r, "state": "idle", "text": "", "gazeDir": 0}
-            for r in ROLES
+        # 3-display setup: the big top screen plus 2 mini screens BETWEEN the
+        # robots. Both minis show the SAME unified view — the current speaker's
+        # subtitle, or a transition arrow — so there is a single mini view-model
+        # broadcast identically to every mini channel.
+        self._mini_state = {
+            "type": "state",
+            "state": "idle",       # "speaking" | "arrow" | "idle"
+            "speaker": None,        # speaking: current speaker; arrow: next speaker
+            "text": "",
         }
+        self._last_speaker: str | None = None
         self._video_token = 0
 
-        # Per-role audio-level streaming tasks.
-        self._level_tasks: dict[str, asyncio.Task | None] = {r: None for r in ROLES}
+        # Single audio-level streamer for the current speaker (drives every
+        # mini orb identically).
+        self._level_task: asyncio.Task | None = None
 
         # Set when a top browser reports the current video ended.
         self._video_ended = asyncio.Event()
@@ -201,8 +223,7 @@ class WebDisplayManager:
         # Seed the latest-state cache so a page opened before any event still
         # renders correctly (idle minis, topic/blank top) on first connect.
         self._broadcast_top()
-        for role in ROLES:
-            self._broadcast_mini(role)
+        self._broadcast_minis()
 
         self._print_urls()
 
@@ -298,6 +319,17 @@ class WebDisplayManager:
             self._log_media_hit("/speech/current", request)
             return FileResponse(str(served))
 
+        @app.get("/bgm/current")
+        async def bgm_current(request: Request) -> Response:
+            bgm = self.bgm_audio_path
+            if bgm is None or not bgm.exists():
+                self._log_media_hit("/bgm/current", request, missing=True)
+                return Response(status_code=404)
+            self._log_media_hit("/bgm/current", request)
+            # BGM files are already MP3; FileResponse handles range requests
+            # so the browser can loop them smoothly.
+            return FileResponse(str(bgm))
+
         @app.websocket("/ws/{channel}")
         async def ws(websocket: WebSocket, channel: str) -> None:
             if channel not in CHANNELS:
@@ -379,9 +411,11 @@ class WebDisplayManager:
         disconnect_reason = "normal"
 
         # Replay the latest known state so a freshly-opened page is correct.
+        # Tag it with the boot id too: a display left open from a previous run
+        # reconnects here and sees the new id, which triggers its reload.
         last = self._latest.get(channel)
         if last is not None:
-            await websocket.send_json(last)
+            await websocket.send_json({**last, "bootId": self._boot_id})
 
         async def sender() -> None:
             try:
@@ -417,7 +451,9 @@ class WebDisplayManager:
             )
 
     def _handle_client_msg(self, channel: str, msg: dict) -> None:
-        if channel == "top" and msg.get("type") == "video_ended":
+        msg_type = msg.get("type")
+
+        if channel == "top" and msg_type == "video_ended":
             current_time = msg.get("currentTime")
             duration = msg.get("duration")
             print(
@@ -425,12 +461,19 @@ class WebDisplayManager:
                 f" current={current_time} duration={duration}"
             )
             self._video_ended.set()
+            return
+
+        if msg_type == "toggle_mute":
+            # A SPACE press in any browser toggles mute for every display.
+            self.toggle_muted()
+            return
 
     # ── Broadcasting ──────────────────────────────────────────────────────────
 
     def _push(self, channel: str, msg: dict) -> None:
+        tagged = {**msg, "bootId": self._boot_id}
         for queue in self._conns[channel]:
-            queue.put_nowait(msg)
+            queue.put_nowait(tagged)
 
     def _broadcast_top(self) -> None:
         self._top["videoSrc"] = (
@@ -441,14 +484,61 @@ class WebDisplayManager:
             if self.speech_audio_path
             else ""
         )
+        self._top["bgmSrc"] = (
+            f"/bgm/current?token={self._bgm_epoch}" if self.bgm_audio_path else ""
+        )
         msg = dict(self._top)
         self._latest["top"] = msg
         self._push("top", msg)
 
-    def _broadcast_mini(self, role: str) -> None:
-        msg = dict(self._mini[role])
-        self._latest[role] = msg
-        self._push(role, msg)
+    def set_bgm(self, path, volume: float = 0.18) -> None:
+        """Start (or switch) the looping background music in the top browser.
+
+        ``volume`` is the playback gain the browser applies to the <audio>
+        element (0..1). The clip loops until ``stop_bgm`` is called.
+        """
+        self.bgm_audio_path = Path(path)
+        self._bgm_epoch += 1
+        self._top["bgmVolume"] = max(0.0, min(1.0, float(volume)))
+        print(f"  [web] BGM -> browser: {self.bgm_audio_path} (vol={volume})")
+        self._broadcast_top()
+
+    def stop_bgm(self) -> None:
+        """Stop the browser background music."""
+        if self.bgm_audio_path is None:
+            return
+        self.bgm_audio_path = None
+        self._bgm_epoch += 1
+        self._broadcast_top()
+
+    def toggle_muted(self) -> None:
+        """Flip the mute state and tell every display to (un)mute its audio."""
+        self.set_muted(not self._top["muted"])
+
+    def set_muted(self, muted: bool) -> None:
+        """Mute/unmute all browser audio (speech + BGM + video).
+
+        Carried in the broadcast STATE (same proven path as video/speech), so it
+        reaches every connected display and any that reconnect while muted.
+        """
+        self._top["muted"] = bool(muted)
+        print(
+            f"  [web] {'muted' if muted else 'unmuted'} "
+            f"-> {len(self._conns['top'])} top display(s)"
+        )
+        self._broadcast_top()
+
+    def _broadcast_minis(self) -> None:
+        """Send the current unified mini view to EVERY mini display, identically."""
+        msg = dict(self._mini_state)
+        for role in ROLES:
+            self._latest[role] = msg
+            self._push(role, msg)
+
+    def _broadcast_control(self, action: str) -> None:
+        msg = {"type": "control", "action": action}
+        for channel in CHANNELS:
+            self._push(channel, msg)
 
     # ── Video (top display) ────────────────────────────────────────────────────
 
@@ -472,8 +562,7 @@ class WebDisplayManager:
         )
         self._broadcast_top()
         # Minis sit idle while the video plays.
-        for role in ROLES:
-            self._set_mini_idle(role)
+        self._mini_idle()
 
     async def wait_for_connection(
         self, channel: str = "top", timeout: float = 30.0
@@ -517,18 +606,25 @@ class WebDisplayManager:
     def show_topic(self, title: str, topic: str) -> None:
         self._top.update(mode="topic", title=title, topic=topic, current=None, next=None)
         self._broadcast_top()
-        for role in ROLES:
-            self._set_mini_idle(role)
+        self._mini_idle()
 
     def point_to(self, next_role: str | None) -> None:
         self._top["current"] = None
         self._top["next"] = next_role
         self._broadcast_top()
-        for role in ROLES:
-            if next_role is None or role == next_role:
-                self._set_mini_idle(role)
-            else:
-                self._set_mini_gaze(role, theme.gaze_direction(role, next_role))
+
+        if next_role is None:
+            self._mini_idle()
+            return
+
+        # Show the transition arrow on both minis. The arrow points TOWARD the
+        # next speaker; each mini computes its own direction from its physical
+        # position (it sits to the right of its namesake robot), so the two
+        # minis can point different ways for a centre speaker. Fade happens on
+        # the client only while the arrow is shown.
+        self._stop_level()
+        self._mini_state.update(state="arrow", speaker=next_role, text="")
+        self._broadcast_minis()
 
     def show_subtitle(
         self,
@@ -548,55 +644,40 @@ class WebDisplayManager:
         self._top["next"] = None
         self._broadcast_top()
 
-        for r in ROLES:
-            if r == role:
-                self._set_mini_speaking(r, text, audio_path)
-            else:
-                self._set_mini_idle(r)
+        # Every mini shows the current speaker's name + subtitle, identically.
+        self._last_speaker = role
+        self._stop_level()
+        self._mini_state.update(state="speaking", speaker=role, text=text)
+        self._broadcast_minis()
+        self._start_level(audio_path)
 
     def finish_subtitle(self, role: str, next_role: str | None = None) -> None:
-        self._set_mini_idle(role)
         self.point_to(next_role)
 
     # ── Mini state helpers ──────────────────────────────────────────────────────
 
-    def _set_mini_speaking(
-        self, role: str, text: str, audio_path: str | Path | None
-    ) -> None:
-        self._stop_level(role)
-        self._mini[role].update(state="speaking", text=text, gazeDir=0)
-        self._broadcast_mini(role)
-        self._start_level(role, audio_path)
-
-    def _set_mini_idle(self, role: str) -> None:
-        self._stop_level(role)
-        self._mini[role].update(state="idle", gazeDir=0)
-        self._broadcast_mini(role)
-
-    def _set_mini_gaze(self, role: str, direction: int) -> None:
-        self._stop_level(role)
-        self._mini[role].update(state="gaze", gazeDir=int(direction))
-        self._broadcast_mini(role)
+    def _mini_idle(self) -> None:
+        self._stop_level()
+        self._mini_state.update(state="idle", speaker=None, text="")
+        self._broadcast_minis()
 
     # ── Audio-level streaming (drives the mini audio orb, server-side) ──────────
 
-    def _start_level(self, role: str, audio_path: str | Path | None) -> None:
+    def _start_level(self, audio_path: str | Path | None) -> None:
         if audio_path is None:
             return
         path = Path(audio_path)
         if not path.exists():
             return
-        self._level_tasks[role] = self._loop.create_task(
-            self._stream_levels(role, path)
-        )
+        self._level_task = self._loop.create_task(self._stream_levels(path))
 
-    def _stop_level(self, role: str) -> None:
-        task = self._level_tasks.get(role)
+    def _stop_level(self) -> None:
+        task = self._level_task
         if task is not None and not task.done():
             task.cancel()
-        self._level_tasks[role] = None
+        self._level_task = None
 
-    async def _stream_levels(self, role: str, path: Path) -> None:
+    async def _stream_levels(self, path: Path) -> None:
         """Read the wav and push 0..1 levels timed off the wall clock.
 
         Mirrors displays/audio_level.WavAudioLevelFollower so the browser bar
@@ -632,12 +713,17 @@ class WebDisplayManager:
                 level = min(1.0, rms * 10.0)
                 if level > 0.01:
                     level = max(level, 0.12)
-                self._push(role, {"type": "level", "value": level})
+                self._push_level_all(level)
                 await asyncio.sleep(1 / 30)
         except asyncio.CancelledError:
             pass
         finally:
-            self._push(role, {"type": "level", "value": 0.0})
+            self._push_level_all(0.0)
+
+    def _push_level_all(self, value: float) -> None:
+        """Push the same audio level to every mini orb."""
+        for role in ROLES:
+            self._push(role, {"type": "level", "value": value})
 
     # ── Event-loop integration (no-ops; the browser does its own rendering) ─────
 
@@ -648,8 +734,8 @@ class WebDisplayManager:
         await stop.wait()
 
     def close(self) -> None:
-        for role in ROLES:
-            self._stop_level(role)
+        self._broadcast_control("stop")
+        self._stop_level()
         if self._server is not None:
             self._server.should_exit = True
         if self._server_task is not None:

@@ -59,8 +59,9 @@ CONTROL_PHASE_OFFSETS = {
     "robot_c": CONTROL_PERIOD * 2.0 / 3.0,
 }
 
-# Idle breathing — original values restored (head bob + antenna sway while idle).
-ENABLE_IDLE_BREATHING = True
+# Idle breathing — head bob + antenna sway while the robot is doing nothing.
+# Disabled by default; set ROBOT_IDLE_BREATHING=1 to re-enable.
+ENABLE_IDLE_BREATHING = os.environ.get("ROBOT_IDLE_BREATHING", "0") == "1"
 
 BREATHING_Z_AMP = 0.005       # 5mm head bob
 BREATHING_FREQ = 0.1
@@ -109,6 +110,128 @@ EMOTION_BLEND_DURATION = 0.3
 # self-heal with no restart; a genuinely dead daemon still triggers one.
 FAILURE_GRACE_SECONDS = 4.0
 
+# A single set_target success does NOT prove the link is healthy. A half-broken
+# Wi-Fi link returns sparse successes between long bursts of failures; the old
+# code reset the failure window on every success, so the grace timer never
+# accumulated and the worker never reconnected — it just logged errors forever.
+# Require a short streak of CONSECUTIVE successes before declaring the link
+# recovered. At 50 Hz this is ~0.3 s of clean frames: trivial for a genuinely
+# healed link, unreachable for a link that can't go 0.3 s without dropping.
+RECOVERY_SUCCESS_STREAK = 15
+
+# ── Startup "full reconnect" ──────────────────────────────────────────────
+# Before connecting, rebuild the robot's daemon backend from scratch so every
+# run begins from a known-good state. This recovers from the two failure modes
+# we keep hitting at the exhibit:
+#   - the robot sitting in SLEEP mode (motors disabled, head down), and
+#   - a PREVIOUS run that crashed and left the backend wedged, a move stuck
+#     running, or a media/WebRTC session held open.
+# A daemon backend restart tears all of that down and rebuilds the motor bus.
+# Set ROBOT_FULL_RESET_ON_START=0 to skip it (e.g. for fast local iteration).
+FULL_RESET_ON_START = os.environ.get("ROBOT_FULL_RESET_ON_START", "1") != "0"
+DAEMON_PORT = 8000
+DAEMON_REACHABLE_TIMEOUT = 30.0   # wait this long for the HTTP daemon to answer
+BACKEND_READY_TIMEOUT = 60.0      # wait this long for the backend to rebuild
+WAKE_SETTLE_SECONDS = 3.0         # let the wake-up emote finish before connecting
+
+
+def _full_reset_and_wake(host: str, log: "logging.Logger") -> None:
+    """Force a clean robot backend before the worker connects.
+
+    All steps go through the daemon HTTP API (the same API the SDK uses
+    internally) and are best-effort: any failure is logged and we fall
+    through to connecting anyway, so a flaky daemon never blocks startup.
+
+    Sequence:
+      1. wait for the daemon HTTP server to answer,
+      2. restart the backend (or start it if it was stopped) — this drops
+         any residual move / media / session state from a crashed run,
+      3. wait until the backend is serving again (motors/status -> 200;
+         it returns 503 "Backend not running" during the rebuild),
+      4. enable motors,
+      5. play the wake-up emote so a sleeping robot rises to its init pose.
+    """
+    import requests
+
+    base = f"http://{host}:{DAEMON_PORT}/api"
+
+    # 1. Daemon HTTP reachable?
+    deadline = time.monotonic() + DAEMON_REACHABLE_TIMEOUT
+    state = None
+    while True:
+        try:
+            r = requests.get(f"{base}/daemon/status", timeout=5)
+            r.raise_for_status()
+            state = (r.json() or {}).get("state")
+            break
+        except Exception as e:  # noqa: BLE001 - best effort
+            if time.monotonic() >= deadline:
+                log.warning(
+                    "Daemon not reachable after %.0fs (%s); connecting without reset.",
+                    DAEMON_REACHABLE_TIMEOUT,
+                    e,
+                )
+                return
+            time.sleep(1.0)
+
+    # 2. Rebuild the backend. restart only works from running/error; if the
+    #    backend was stopped/not_initialized, start it instead.
+    try:
+        if state in ("stopped", "not_initialized"):
+            log.info("Daemon backend is %s; starting it.", state)
+            requests.post(
+                f"{base}/daemon/start", params={"wake_up": "true"}, timeout=10
+            ).raise_for_status()
+        else:
+            log.info("Restarting daemon backend (state=%s).", state)
+            resp = requests.post(f"{base}/daemon/restart", timeout=10)
+            if resp.status_code == 409:
+                log.warning("Daemon busy; skipping restart.")
+            else:
+                resp.raise_for_status()
+    except Exception as e:  # noqa: BLE001 - best effort
+        log.warning("Backend restart request failed: %s; continuing.", e)
+
+    # 3. Wait for the backend to come back. Give teardown a moment to begin so
+    #    we don't mistake the old (about-to-die) backend for the new one.
+    time.sleep(2.0)
+    ready_deadline = time.monotonic() + BACKEND_READY_TIMEOUT
+    while True:
+        try:
+            r = requests.get(f"{base}/motors/status", timeout=5)
+            if r.status_code == 200:
+                log.info(
+                    "Backend ready after reset (motors=%s).",
+                    (r.json() or {}).get("mode"),
+                )
+                break
+        except Exception:  # noqa: BLE001 - 503/connection error while rebuilding
+            pass
+        if time.monotonic() >= ready_deadline:
+            log.warning(
+                "Backend not ready %.0fs after reset; connecting anyway.",
+                BACKEND_READY_TIMEOUT,
+            )
+            break
+        time.sleep(1.0)
+
+    # 4. Enable motors.
+    try:
+        requests.post(
+            f"{base}/motors/set_mode/enabled", timeout=5
+        ).raise_for_status()
+        log.info("Motors enabled.")
+    except Exception as e:  # noqa: BLE001 - best effort
+        log.warning("Could not enable motors: %s", e)
+
+    # 5. Wake from sleep (init pose + wake emote), then let it settle so the
+    #    move finishes before the control loop starts sending targets.
+    try:
+        requests.post(f"{base}/move/play/wake_up", timeout=5).raise_for_status()
+        log.info("Wake-up emote triggered.")
+        time.sleep(WAKE_SETTLE_SECONDS)
+    except Exception as e:  # noqa: BLE001 - best effort
+        log.warning("Wake-up failed: %s", e)
 
 
 def main() -> None:
@@ -143,6 +266,13 @@ def main() -> None:
 
     if robot_name:
         kwargs["robot_name"] = robot_name
+
+    # Full reconnect: rebuild the daemon backend and wake the robot before we
+    # open the SDK session, so we never inherit sleep mode or wedged state from
+    # a previous crashed run.
+    if FULL_RESET_ON_START:
+        log.info("Performing full robot reset before connecting...")
+        _full_reset_and_wake(host, log)
 
     log.info("Connecting to %s at %s...", robot_name or "auto", host)
 
@@ -224,8 +354,13 @@ def main() -> None:
     last_err_time = [0.0]
     set_target_failures = [0]
     # monotonic timestamp of the first failure in the current failing streak,
-    # or None while set_target is succeeding.
+    # or None once the link is confirmed healthy again.
     first_failure_time: list = [None]
+    # count of consecutive set_target successes since the last failure. The link
+    # is only declared recovered (failure window cleared) once this reaches
+    # RECOVERY_SUCCESS_STREAK, so sparse successes in a half-broken state cannot
+    # keep resetting the grace timer.
+    consecutive_successes = [0]
     recorded_moves_cache: list = [None]
 
     def _get_recorded_moves():
@@ -474,10 +609,18 @@ def main() -> None:
 
             try:
                 robot.set_target(head=head, antennas=ant, body_yaw=body)
-                set_target_failures[0] = 0
-                first_failure_time[0] = None
+                consecutive_successes[0] += 1
+
+                # Only treat the link as recovered after a streak of clean
+                # frames. A lone success between failure bursts (half-broken
+                # link) must NOT reset the grace window, or reconnect never
+                # fires.
+                if consecutive_successes[0] >= RECOVERY_SUCCESS_STREAK:
+                    set_target_failures[0] = 0
+                    first_failure_time[0] = None
 
             except Exception as e:
+                consecutive_successes[0] = 0
                 set_target_failures[0] += 1
 
                 now_t = time.monotonic()
@@ -514,9 +657,11 @@ def main() -> None:
                 if failing_for >= FAILURE_GRACE_SECONDS:
                     log.error(
                         "Connection appears lost: set_target failing for %.1fs "
-                        "(%d calls). Exiting worker so controller can reconnect.",
+                        "(%d failed calls, best recent success streak < %d). "
+                        "Exiting worker so controller can reconnect.",
                         failing_for,
                         set_target_failures[0],
+                        RECOVERY_SUCCESS_STREAK,
                     )
                     stop_event.set()
                     break

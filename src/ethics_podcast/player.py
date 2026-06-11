@@ -92,6 +92,34 @@ ENABLE_SPEECH_SWAY = True
 ENABLE_RECORDED_ACTIONS = True
 
 
+def start_space_key_listener(loop, callback, stop_event) -> None:
+    """Call ``callback`` on the asyncio loop whenever SPACE is pressed.
+
+    A daemon thread polls the console without blocking the loop. Windows uses
+    msvcrt; elsewhere it is a no-op (the exhibit PC runs Windows).
+    """
+    import threading
+
+    def reader() -> None:
+        try:
+            import msvcrt
+        except Exception:
+            return
+        while not stop_event.is_set():
+            try:
+                if msvcrt.kbhit():
+                    ch = msvcrt.getch()
+                    if ch == b" ":
+                        loop.call_soon_threadsafe(callback)
+                else:
+                    time.sleep(0.05)
+            except Exception:
+                time.sleep(0.1)
+
+    threading.Thread(target=reader, daemon=True).start()
+    print("  [mute] Press SPACE (terminal or browser) to mute/unmute.")
+
+
 def _diag(message: str) -> None:
     """Print a timeline marker that is easy to grep in field logs."""
     print(f"  [diag {time.strftime('%H:%M:%S')}] {message}", flush=True)
@@ -170,12 +198,14 @@ async def _play_tv_audio(
     if audio_mode in ("surround", "hybrid_surround"):
         output_pcm = _apply_stereo_pan(pcm, pan)
 
-    loop = asyncio.get_event_loop()
-
-    await loop.run_in_executor(
-        None,
-        lambda: sd.play(output_pcm, samplerate=sample_rate, blocking=True),
-    )
+    # Use non-blocking playback so Ctrl+C can unwind immediately instead of
+    # waiting on a worker thread that is stuck inside sd.play(..., blocking=True).
+    sd.stop()
+    try:
+        sd.play(output_pcm, samplerate=sample_rate, blocking=False)
+        await asyncio.sleep(len(output_pcm) / sample_rate)
+    finally:
+        sd.stop()
 
 
 async def _play_robot_audio(
@@ -576,16 +606,27 @@ async def run_playback_with_connected_robots(
 
     bgm_path = get_bgm_path_for_session(session_name)
 
-    bgm = BGMManager(
-        bgm_path,
-        normal_volume=0.40,
-        speaking_volume=0.18,
+    # When the browser display is the audio output (TV / computer), play the BGM
+    # in the browser too — mono/centered — so ALL audio comes from one place and
+    # the on-screen mute covers it. Otherwise fall back to the local pygame mixer.
+    use_browser_bgm = (
+        display is not None
+        and getattr(display, "plays_bgm_audio", False)
+        and audio_mode in ("computer", "surround")
     )
 
-    await bgm.intro()
-
-    # 会話パート全体ではBGMを低く固定する
-    await bgm.fade_to(bgm.speaking_volume, duration=0.8)
+    bgm: BGMManager | None = None
+    if use_browser_bgm:
+        display.set_bgm(bgm_path, volume=0.18)
+    else:
+        bgm = BGMManager(
+            bgm_path,
+            normal_volume=0.40,
+            speaking_volume=0.18,
+        )
+        await bgm.intro()
+        # 会話パート全体ではBGMを低く固定する
+        await bgm.fade_to(bgm.speaking_volume, duration=0.8)
 
     window_stop = asyncio.Event()
     window_task = None
@@ -712,7 +753,14 @@ async def run_playback_with_connected_robots(
             if window_task is not None:
                 await window_task
 
-        await bgm.stop()
+        # Synchronous hard stop so Ctrl+C teardown cannot leave the BGM playing.
+        if bgm is not None:
+            bgm.hard_stop()
+        elif use_browser_bgm and display is not None:
+            try:
+                display.stop_bgm()
+            except Exception:
+                pass
 
 async def run_playback(
     config: Config,
@@ -863,7 +911,10 @@ async def run_playback(
         print("\nPlayback complete!")
 
     finally:
-        await bgm.stop()
+        # Synchronous hard stop (no await): guarantees the music stops even
+        # when this finally runs during a Ctrl+C teardown, where awaiting a
+        # 1.5s fade would not complete and would leave the BGM playing.
+        bgm.hard_stop()
 
         robot_a.stop()
         robot_b.stop()

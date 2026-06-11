@@ -182,12 +182,24 @@ function createGaze(canvas, glowRgb, options = {}) {
 # ── Small WebSocket helper with auto-reconnect ───────────────────────────────
 
 _WS_JS = r"""
+// Shared across every connectWS() call on a page (the /all page opens four).
+// First boot id seen is just recorded; a CHANGED id means the program was
+// restarted, so the display reloads itself to pick up a clean slate.
+let __bootId = null;
 function connectWS(role, onMessage) {
   let ws = null;
   function open() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws/${role}`);
-    ws.onmessage = (ev) => { try { onMessage(JSON.parse(ev.data), ws); } catch (e) {} };
+    ws.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg && msg.bootId) {
+        if (__bootId === null) { __bootId = msg.bootId; }
+        else if (msg.bootId !== __bootId) { location.reload(); return; }
+      }
+      try { onMessage(msg, ws); } catch (e) {}
+    };
     ws.onclose = () => setTimeout(open, 800);
     ws.onerror = () => { try { ws.close(); } catch (e) {} };
   }
@@ -278,6 +290,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #000;
 <body>
   <div id="video-layer" class="layer"><video id="vid" autoplay playsinline webkit-playsinline preload="auto"></video></div>
   <audio id="speech-audio" preload="auto"></audio>
+  <audio id="bgm" preload="auto" loop></audio>
   <div id="fade-curtain"></div>
   <div id="startov">▶ クリックで動画を開始<br>Click to start</div>
   <div id="topic-layer" class="layer">
@@ -296,6 +309,37 @@ const videoLayer = document.getElementById('video-layer');
 const topicLayer = document.getElementById('topic-layer');
 const vid = document.getElementById('vid');
 const speechAudio = document.getElementById('speech-audio');
+const bgmAudio = document.getElementById('bgm');
+let curBgmSrc = '';
+// All exhibit audio lives in the browser, so muting just gates these elements.
+function applyMute(s) {
+  if (typeof s.muted !== 'boolean') return;
+  speechAudio.muted = s.muted;
+  bgmAudio.muted = s.muted;
+  vid.muted = s.muted;
+}
+// BGM is mono/centered: the <audio> element plays straight to the output with
+// equal L/R, so it does not follow the per-speaker speech panning.
+function tryPlayBgm() {
+  if (!bgmAudio.src) return;
+  const pr = bgmAudio.play();
+  if (pr && pr.catch) pr.catch((e) => {
+    console.warn('[top] bgm blocked — click display once:', e && e.name);
+  });
+}
+function applyBgm(s) {
+  if (s.bgmSrc && s.bgmSrc !== curBgmSrc) {
+    curBgmSrc = s.bgmSrc;
+    bgmAudio.src = s.bgmSrc;
+    bgmAudio.loop = true;
+    bgmAudio.load();
+    tryPlayBgm();
+  } else if (!s.bgmSrc && curBgmSrc) {
+    curBgmSrc = '';
+    try { bgmAudio.pause(); bgmAudio.removeAttribute('src'); bgmAudio.load(); } catch (e) {}
+  }
+  if (typeof s.bgmVolume === 'number') bgmAudio.volume = Math.max(0, Math.min(1, s.bgmVolume));
+}
 const fadeCurtain = document.getElementById('fade-curtain');
 const gaze = createGaze(document.getElementById('gaze'), CFG.glowRgb);
 let speechAudioCtx = null;
@@ -427,9 +471,10 @@ function transitionTo(mode) {
   }, FADE_MS);
 }
 // Any user interaction also kicks playback (covers autoplay-blocked kiosks).
-startov.addEventListener('click', () => { startov.style.display = 'none'; tryPlay(); });
+startov.addEventListener('click', () => { startov.style.display = 'none'; tryPlay(); tryPlayBgm(); });
 document.addEventListener('pointerdown', () => {
   retryPlayIfVisible();
+  tryPlayBgm();
   // Do NOT (re)start speech while a video is showing. The speech element still
   // holds the PREVIOUS turn's clip, so a click during the video would replay
   // the old robot voice mixed into the video audio. Only start speech when a
@@ -466,8 +511,36 @@ function show(mode) {
   transitionTo('topic');
 }
 
+function stopAllMedia() {
+  clearFadeTimer();
+  wantVideoPlaying = false;
+  visibleMode = null;
+  curSrc = '';
+  curEpoch = -1;
+  curSpeechEpoch = -1;
+  startov.style.display = 'none';
+  fadeCurtain.classList.remove('on');
+  videoLayer.classList.remove('on');
+  topicLayer.classList.remove('on');
+  try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (e) {}
+  try {
+    speechAudio.pause();
+    speechAudio.removeAttribute('src');
+    speechAudio.load();
+  } catch (e) {}
+  try {
+    bgmAudio.pause();
+    bgmAudio.removeAttribute('src');
+    bgmAudio.load();
+    curBgmSrc = '';
+  } catch (e) {}
+  gaze.stop();
+}
+
 function render(s) {
-  console.log('[top] state', s.mode, 'src', s.videoSrc, 'epoch', s.videoEpoch);
+  console.log('[top] state', s.mode, 'src', s.videoSrc, 'epoch', s.videoEpoch, 'muted', s.muted);
+  applyBgm(s);
+  applyMute(s);
   show(s.mode);
   if (s.speechAudioSrc && s.speechAudioEpoch !== curSpeechEpoch) {
     curSpeechEpoch = s.speechAudioEpoch;
@@ -498,7 +571,21 @@ function render(s) {
   gaze.stop();
 }
 
-const conn = connectWS('top', (msg) => { if (msg.type === 'state') render(msg); });
+const conn = connectWS('top', (msg) => {
+  if (msg.type === 'control' && msg.action === 'stop') {
+    stopAllMedia();
+    return;
+  }
+  if (msg.type === 'state') render(msg);
+});
+
+// SPACE toggles mute for every display (server echoes the new state back).
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' ') {
+    e.preventDefault();
+    conn.send({ type: 'toggle_mute' });
+  }
+});
 
 // Tell the server the video finished so playback can advance.
 vid.addEventListener('pause', () => {
@@ -643,13 +730,24 @@ const orb = document.getElementById('orb');
 const orbCtx = orb.getContext('2d');
 const heroArrowEl = document.getElementById('hero-arrow');
 
-speakerEl.style.color = accent;
-speakerIconEl.style.setProperty('--role-color', accent);
-speakerIconEl.style.setProperty('--role-glow', `rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.34)`);
-speakerIconEl.innerHTML = `<img src="${CFG.icons[ROLE]}" alt="${CFG.names[ROLE] || ROLE}">`;
-glowEl.style.background =
-  `linear-gradient(45deg, rgba(${accentRgb[0]},${accentRgb[1]},${accentRgb[2]},0.13), rgba(0,0,0,0) 60%)`;
-heroArrowEl.style.setProperty('--arrow-rgb', accentRgb.join(','));
+// Every mini shows the SAME unified view, so the speaker (name/icon/accent) is
+// driven by the server state, not by this page's own role.
+let shownSpeaker = null;
+function setSpeaker(role) {
+  if (!role || role === shownSpeaker) return;
+  shownSpeaker = role;
+  const a = CFG.accent[role] || accent;
+  const rgb = CFG.accentRgb[role] || accentRgb;
+  speakerEl.style.color = a;
+  speakerEl.textContent = (CFG.names[role] || role).toUpperCase();
+  speakerIconEl.style.setProperty('--role-color', a);
+  speakerIconEl.style.setProperty('--role-glow', `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.34)`);
+  speakerIconEl.innerHTML = `<img src="${CFG.icons[role]}" alt="${CFG.names[role] || role}">`;
+  glowEl.style.background =
+    `linear-gradient(45deg, rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.13), rgba(0,0,0,0) 60%)`;
+  heroArrowEl.style.setProperty('--arrow-rgb', rgb.join(','));
+}
+setSpeaker(ROLE);  // sensible default before the first state arrives
 // Mini displays use the lightweight DOM arrow below. Keep this no-op object so
 // state handling stays simple without running a second canvas animation.
 const gaze = { start() {}, stop() {}, setDirection() {}, setAccent() {} };
@@ -800,29 +898,48 @@ function hideHeroArrow() {
   heroArrowEl.classList.remove('on');
 }
 
+function stopAllMedia() {
+  content.classList.remove('speaking');
+  setLevel(0);
+  hideHeroArrow();
+  gaze.stop();
+}
+
+// This mini sits to the RIGHT of its namesake robot, i.e. between that robot
+// and the next one. Robots are at integer positions (0,1,2 left->right).
+const MINI_POS = (CFG.position[ROLE] ?? 0) + 0.5;
+function arrowDirToward(role) {
+  const sp = CFG.position[role];
+  if (sp == null) return 0;
+  return sp > MINI_POS ? 1 : (sp < MINI_POS ? -1 : 0);   // +1 right, -1 left
+}
+
 function render(s) {
   if (s.state === 'speaking') {
+    setSpeaker(s.speaker);          // who is talking (subtitle same on every mini)
     content.classList.add('speaking');
-    speakerEl.textContent = (CFG.names[ROLE] || ROLE).toUpperCase();
     subtitleEl.textContent = s.text || '';
     setLevel(0.4);                  // default until live levels arrive
     hideHeroArrow();
-    gaze.stop();
-  } else if (s.state === 'gaze') {
+  } else if (s.state === 'arrow') {
+    // Transition: fade the subtitle out (CSS handles the fade) and point the
+    // arrow toward the next speaker, from THIS mini's physical position.
     content.classList.remove('speaking');
     setLevel(0);
-    if (s.gazeDir && s.gazeDir !== 0) {
-      gaze.stop(); showHeroArrow(s.gazeDir);
-    } else { gaze.stop(); hideHeroArrow(); }
+    const dir = arrowDirToward(s.speaker);
+    if (dir !== 0) showHeroArrow(dir); else hideHeroArrow();
   } else {  // idle
     content.classList.remove('speaking');
     setLevel(0);
     hideHeroArrow();
-    gaze.stop();
   }
 }
 
 connectWS(ROLE, (msg) => {
+  if (msg.type === 'control' && msg.action === 'stop') {
+    stopAllMedia();
+    return;
+  }
   if (msg.type === 'state') render(msg);
   else if (msg.type === 'level') setLevel(msg.value);
 });
@@ -841,15 +958,17 @@ def page_all() -> str:
         "*{margin:0;padding:0;box-sizing:border-box}"
         "html,body{width:100%;height:100%;overflow:hidden;background:#0b1622}"
         ".grid{display:grid;grid-template-columns:30% 1fr;height:100%;gap:6px;padding:6px}"
-        ".top{grid-row:span 3;width:100%;height:100%;border:0;border-radius:8px}"
+        ".top{grid-row:span 2;width:100%;height:100%;border:0;border-radius:8px}"
         ".mini{width:100%;height:100%;border:0;border-radius:8px}"
-        ".right{display:grid;grid-template-rows:1fr 1fr 1fr;gap:6px}"
+        ".right{display:grid;grid-template-rows:1fr 1fr;gap:6px}"
         "</style></head><body><div class='grid'>"
         '<iframe src="/top" class="top" allow="autoplay; fullscreen"></iframe>'
         "<div class='right'>"
+        # 3-display setup: one big top + two identical mini screens. Both minis
+        # show the same unified view, so any two routes work.
         + "".join(
             f'<iframe src="/{r}" class="mini" allow="autoplay"></iframe>'
-            for r in ROLES
+            for r in ROLES[:2]
         )
         + "</div></div></body></html>"
     )

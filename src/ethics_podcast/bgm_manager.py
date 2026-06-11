@@ -6,6 +6,43 @@ from pathlib import Path
 import pygame
 
 
+def stop_all_audio() -> None:
+    """Emergency: stop ALL pygame audio immediately and release the device.
+
+    Synchronous and exception-proof, so it is safe to call from a Ctrl+C /
+    KeyboardInterrupt handler or during interpreter shutdown. Without this the
+    BGM plays on a separate SDL thread and keeps sounding (and can keep the
+    process alive) after the asyncio loop has stopped.
+    """
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.stop()
+            pygame.mixer.quit()
+    except Exception:
+        pass
+
+
+# ── Live BGM mute, toggleable from the web UI ─────────────────────────────────
+# A new BGMManager is created per video session, so the mute state lives at
+# module level (persists across sessions) and the currently-playing instance
+# registers itself so a toggle takes effect immediately.
+_bgm_muted = False
+_active_bgm: "BGMManager | None" = None
+
+
+def set_bgm_muted(muted: bool) -> None:
+    """Mute or unmute the background music live (e.g. from a browser button)."""
+    global _bgm_muted
+    _bgm_muted = bool(muted)
+    if _active_bgm is not None:
+        _active_bgm._apply_mute()
+
+
+def is_bgm_muted() -> bool:
+    """Return the current BGM mute state."""
+    return _bgm_muted
+
+
 def get_project_root() -> Path:
     """
     Return the Reachy project root.
@@ -92,6 +129,12 @@ class BGMManager:
         self.current_volume = 0.0
         self._started = True
 
+        # Register as the live instance so a web mute toggle reaches it, and
+        # honour any mute that was already set in a previous session.
+        global _active_bgm
+        _active_bgm = self
+        self._apply_mute()
+
         print(f"  BGM started centered: {self.music_path}")
 
     def _set_center_volume(self, volume: float) -> None:
@@ -102,10 +145,22 @@ class BGMManager:
         """
         volume = max(0.0, min(1.0, volume))
 
-        if self._channel is not None:
-            self._channel.set_volume(volume, volume)
-
+        # Track the intended volume (so fades stay logical even while muted),
+        # but force the audible output to 0 when muted.
         self.current_volume = volume
+        applied = 0.0 if _bgm_muted else volume
+
+        if self._channel is not None:
+            self._channel.set_volume(applied, applied)
+
+    def _apply_mute(self) -> None:
+        """Re-apply the current intended volume through the mute gate."""
+        applied = 0.0 if _bgm_muted else self.current_volume
+        if self._channel is not None:
+            try:
+                self._channel.set_volume(applied, applied)
+            except Exception:
+                pass
 
     async def fade_to(self, target_volume: float, duration: float) -> None:
         """
@@ -176,5 +231,36 @@ class BGMManager:
             self._channel.stop()
 
         self._started = False
+        self._unregister()
 
         print("  BGM stopped")
+
+    def hard_stop(self) -> None:
+        """Stop BGM immediately, with no async fade.
+
+        Unlike ``stop()`` this takes no ``await`` and touches no asyncio
+        objects beyond cancelling a pending fade task, so it completes even
+        when called from a ``finally`` while the event loop is being torn
+        down by a KeyboardInterrupt. Idempotent.
+        """
+        try:
+            if self._fade_task is not None and not self._fade_task.done():
+                self._fade_task.cancel()
+        except Exception:
+            pass
+
+        try:
+            if self._channel is not None:
+                self._channel.stop()
+        except Exception:
+            pass
+
+        self.current_volume = 0.0
+        self._started = False
+        self._unregister()
+
+    def _unregister(self) -> None:
+        """Drop the live-instance pointer if it still points at this BGM."""
+        global _active_bgm
+        if _active_bgm is self:
+            _active_bgm = None

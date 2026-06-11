@@ -28,6 +28,85 @@ logger = logging.getLogger(__name__)
 
 OPENAI_SAMPLE_RATE = 24000
 
+WORKER_SCRIPT_NAME = "robot_worker.py"
+
+
+def kill_stale_workers(grace: float = 3.0) -> int:
+    """Kill leftover ``robot_worker.py`` processes from a previous crashed run.
+
+    A clean shutdown stops these subprocesses, but if the previous
+    ethics-podcast run crashed or was force-killed, orphaned workers can
+    linger — still holding the robots' WebSocket/media sessions and the
+    local audio device, which makes the next run's connection flaky. Sweep
+    them before spawning fresh workers.
+
+    Processes that are descendants of THIS process are never touched, so
+    workers we already own are safe even if this is called more than once.
+
+    Returns the number of stale workers terminated.
+    """
+    try:
+        import psutil
+    except Exception as e:  # noqa: BLE001 - psutil should be installed; degrade gracefully
+        logger.warning("psutil unavailable (%s); skipping stale-worker sweep.", e)
+        return 0
+
+    me = psutil.Process()
+    own_pids = {me.pid}
+    try:
+        own_pids |= {child.pid for child in me.children(recursive=True)}
+    except psutil.Error:
+        pass
+
+    def _is_worker(proc) -> bool:
+        # The worker is launched as: <python> <.../robot_worker.py> <host> ...
+        # Match ONLY that shape — a Python interpreter running robot_worker.py
+        # as its script argument (argv[1]). A loose substring search over the
+        # whole command line is dangerous: it also matches a `py_compile
+        # robot_worker.py`, a grep of the file, or the very shell that launched
+        # this tool, and would kill them.
+        name = (proc.info.get("name") or "").lower()
+        if not name.startswith("python"):
+            return False
+        cmdline = proc.info.get("cmdline") or []
+        return (
+            len(cmdline) >= 2
+            and os.path.basename(str(cmdline[1])) == WORKER_SCRIPT_NAME
+        )
+
+    victims = []
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            if proc.pid in own_pids:
+                continue
+            if _is_worker(proc):
+                victims.append(proc)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    if not victims:
+        return 0
+
+    for proc in victims:
+        try:
+            proc.terminate()
+        except psutil.Error:
+            pass
+
+    gone, alive = psutil.wait_procs(victims, timeout=grace)
+    for proc in alive:
+        try:
+            proc.kill()
+        except psutil.Error:
+            pass
+
+    logger.warning(
+        "Swept %d stale %s process(es) from a previous run.",
+        len(victims),
+        WORKER_SCRIPT_NAME,
+    )
+    return len(victims)
+
 
 class RobotController:
     """Proxy that sends high-level commands to a robot subprocess."""
@@ -476,6 +555,10 @@ async def connect_robots(
     that fail to connect are replaced with MockRobot so the exhibit can still
     run with the robots that are available.
     """
+    # Clear out any orphaned workers from a previous crashed run before we
+    # spawn fresh ones, so they cannot fight over the robots' sessions.
+    kill_stale_workers()
+
     controllers = [
         RobotController(
             config.host,
