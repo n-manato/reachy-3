@@ -11,7 +11,7 @@ Phases:
   0. Setup — discover robots, assign roles, and refresh IPs
   1. Generate — runs the AI conversation, saves audio + transcripts to disk
   2. Play    — plays the saved conversation through the robots
-  3. Power OFF/ON & Wake — stops daemons, starts them again, wakes robots
+  3. Restart Robots — stops daemons, starts them again, wakes robots
   4. Exit
 """
 
@@ -385,8 +385,8 @@ def _print_discovered_robot_dashboards(robots_info: list[dict]) -> None:
         print(f"    {i + 1}. {name}: http://{ip}:8000")
 
 
-def _power_cycle_and_wake_robots(config: Config) -> None:
-    """Turn configured robot daemons off, then on, and print status URLs."""
+def _restart_robots(config: Config) -> None:
+    """Restart configured robot daemons and print status URLs."""
     import concurrent.futures
 
     targets = [
@@ -399,14 +399,14 @@ def _power_cycle_and_wake_robots(config: Config) -> None:
     for label, name, host in targets:
         by_host.setdefault(host, []).append((label, name))
 
-    print("\n  Turning configured robots OFF, then ON:")
+    print("\n  Restarting configured robots:")
     for host, roles in by_host.items():
         role_text = ", ".join(
             f"{label} ({name or '?'})" for label, name in roles
         )
         print(f"    {role_text}: http://{host}:8000")
         if len(roles) > 1:
-            print(f"      WARNING: multiple roles use the same host {host}; toggling once.")
+            print(f"      WARNING: multiple roles use the same host {host}; restarting once.")
 
     def _run_one(host: str) -> tuple[str, bool, str]:
         base = f"http://{host}:8000/api"
@@ -477,10 +477,6 @@ def _power_cycle_and_wake_robots(config: Config) -> None:
 
             requests.post(
                 f"{base}/motors/set_mode/enabled",
-                timeout=5,
-            ).raise_for_status()
-            requests.post(
-                f"{base}/move/play/wake_up",
                 timeout=5,
             ).raise_for_status()
             time.sleep(3.0)
@@ -800,13 +796,11 @@ def _pick_session(action: str = "use") -> str | None:
         print("       Play each video, then let the three robots discuss it.")
         print(f"    {len(names) + 2}. Multi-Display Exhibit")
         print("       Same loop across 4 screens (big top + 3 mini under robots).")
-        print(f"    {len(names) + 3}. Multi-Display Exhibit (Demo, no robots)")
-        print("       4-screen UI with computer audio — no robots / no SDK needed.")
 
     if action == "play" and generated:
         print("    a. Play ALL generated sessions in sequence")
 
-    max_number = len(names) + 3 if action == "play" else len(names)
+    max_number = len(names) + 2 if action == "play" else len(names)
 
     pick = input(
         f"\n  Select session (1-{max_number}"
@@ -822,9 +816,6 @@ def _pick_session(action: str = "use") -> str | None:
 
     if action == "play" and pick == str(len(names) + 2):
         return "MULTI_DISPLAY_LOOP"
-
-    if action == "play" and pick == str(len(names) + 3):
-        return "MULTI_DISPLAY_DEMO"
 
     try:
         idx = int(pick) - 1
@@ -880,7 +871,7 @@ def main() -> None:
         print("0. Setup, Discover, assign & refresh robots")
         print("1. Generate Conversation")
         print("2. Play on Robots")
-        print("3. Power OFF/ON & Wake Robots")
+        print("3. Restart Robots")
         print("4. Exit")
 
         choice = _input_or_wake("\nSelect (0-4): ", wake_proc)
@@ -936,22 +927,6 @@ def main() -> None:
                 session_name = _pick_session("play")
 
                 if session_name is None:
-                    wake_proc = None
-                    continue
-
-                # Demo mode forces computer audio — no audio picker needed.
-                if session_name == "MULTI_DISPLAY_DEMO":
-                    from ethics_podcast.multi_video_discussion import (
-                        run_multi_display_discussion_loop,
-                    )
-
-                    asyncio.run(
-                        run_multi_display_discussion_loop(
-                            _web_display_config(config),
-                            demo_mode=True,
-                        )
-                    )
-
                     wake_proc = None
                     continue
 
@@ -1051,13 +1026,13 @@ def main() -> None:
             wake_proc = None
 
             try:
-                _power_cycle_and_wake_robots(config)
+                _restart_robots(config)
 
             except KeyboardInterrupt:
-                print("\nPower cycle interrupted.")
+                print("\nRestart interrupted.")
 
             except Exception as e:
-                logging.error("Power cycle failed: %s", e, exc_info=True)
+                logging.error("Restart failed: %s", e, exc_info=True)
 
             wake_proc = None
 
