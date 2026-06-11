@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import msvcrt
 import sys
 import time
 from pathlib import Path
@@ -9,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import vlc
 from scipy.io import wavfile
+
+from ethics_podcast.input_utils import read_arrow_key_windows
 
 from PySide6.QtCore import QObject, QRectF, Qt, QTimer
 from PySide6.QtGui import (
@@ -48,26 +49,6 @@ def _get_app() -> QApplication:
         app = QApplication(sys.argv)
 
     return app
-
-
-def _read_arrow_key_windows() -> str | None:
-    if not msvcrt.kbhit():
-        return None
-
-    first = msvcrt.getch()
-
-    if first not in (b"\x00", b"\xe0"):
-        return None
-
-    second = msvcrt.getch()
-
-    if second == b"M":
-        return "right"
-
-    if second == b"K":
-        return "left"
-
-    return None
 
 
 def _add_shadow(
@@ -1567,7 +1548,7 @@ class ControlledVideoWindow(QWidget):
             elapsed = time.monotonic() - start_time
             state = self.player.get_state()
 
-            key = _read_arrow_key_windows()
+            key = read_arrow_key_windows()
 
             if key == "right":
                 new_time = min(current_ms + 10_000, duration_ms - 1000)

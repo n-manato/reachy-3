@@ -73,7 +73,8 @@ def _voice_id_for_role(config: Config, role: str) -> str:
 logger = logging.getLogger(__name__)
 
 BASE_OUTPUT_DIR = Path("output")
-OPENAI_SAMPLE_RATE = 24000
+# Single source of truth for the audio sample rate (see elevenlabs_tts.py).
+OPENAI_SAMPLE_RATE = ELEVENLABS_SAMPLE_RATE
 
 # Models are read from .env.
 # Recommended:

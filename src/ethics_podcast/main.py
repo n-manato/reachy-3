@@ -27,9 +27,6 @@ import requests
 
 from ethics_podcast.config import Config
 
-TV_AUDIO_DELAY = 0.0
-ROBOT_AUDIO_DELAY = 0.0
-
 
 def _web_display_config(config: Config) -> Config:
     """Force the browser display backend for the multi-display exhibit."""
@@ -690,8 +687,8 @@ def main() -> None:
                         run_video_discussion_loop(
                             config,
                             audio_mode=audio_mode,
-                            tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
-                            robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                            tv_audio_delay=config.tv_audio_delay if audio_mode == "hybrid_surround" else 0.0,
+                            robot_audio_delay=config.robot_audio_delay if audio_mode == "hybrid_surround" else 0.0,
                         )
                     )
 
@@ -707,8 +704,8 @@ def main() -> None:
                         run_multi_display_discussion_loop(
                             _web_display_config(config),
                             audio_mode=audio_mode,
-                            tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
-                            robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                            tv_audio_delay=config.tv_audio_delay if audio_mode == "hybrid_surround" else 0.0,
+                            robot_audio_delay=config.robot_audio_delay if audio_mode == "hybrid_surround" else 0.0,
                         )
                     )
 
@@ -738,8 +735,8 @@ def main() -> None:
                                 config,
                                 session,
                                 audio_mode=audio_mode,
-                                tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
-                                robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                                tv_audio_delay=config.tv_audio_delay if audio_mode == "hybrid_surround" else 0.0,
+                                robot_audio_delay=config.robot_audio_delay if audio_mode == "hybrid_surround" else 0.0,
                             )
                         )
 
@@ -756,8 +753,8 @@ def main() -> None:
                             config,
                             session_name,
                             audio_mode=audio_mode,
-                            tv_audio_delay=TV_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
-                            robot_audio_delay=ROBOT_AUDIO_DELAY if audio_mode == "hybrid_surround" else 0.0,
+                            tv_audio_delay=config.tv_audio_delay if audio_mode == "hybrid_surround" else 0.0,
+                            robot_audio_delay=config.robot_audio_delay if audio_mode == "hybrid_surround" else 0.0,
                         )
                     )
 

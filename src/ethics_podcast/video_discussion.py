@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-import msvcrt
 from pathlib import Path
 
 from ethics_podcast.generator import run_generate_video_discussion
@@ -245,34 +244,6 @@ def add_introductions_to_conversation(session_name: str) -> None:
         print(f"  Updated introductions in {conversation_path}")
     else:
         print("  No introductions were added. Check speaker/text keys in conversation.json.")
-
-
-def _read_arrow_key_windows() -> str | None:
-    """Read one arrow key on Windows without blocking.
-
-    Returns:
-      "right" for right arrow
-      "left" for left arrow
-      None if no arrow key was pressed
-    """
-    if not msvcrt.kbhit():
-        return None
-
-    first = msvcrt.getch()
-
-    # Arrow keys send a prefix first.
-    if first not in (b"\x00", b"\xe0"):
-        return None
-
-    second = msvcrt.getch()
-
-    if second == b"M":
-        return "right"
-
-    if second == b"K":
-        return "left"
-
-    return None
 
 
 def _print_audio_mode(audio_mode: AudioMode) -> None:

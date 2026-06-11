@@ -38,34 +38,10 @@ from PySide6.QtWidgets import QApplication
 
 from ethics_podcast.displays import theme
 from ethics_podcast.displays.gaze_flow import GazeFlowWidget
-
-try:  # Windows-only arrow-key skip support (matches existing video window).
-    import msvcrt
-except ImportError:  # pragma: no cover - non-Windows fallback
-    msvcrt = None
+from ethics_podcast.input_utils import read_arrow_key_windows
 
 
 VIDEO_VOLUME = 75
-
-
-def _read_arrow_key_windows() -> str | None:
-    if msvcrt is None or not msvcrt.kbhit():
-        return None
-
-    first = msvcrt.getch()
-
-    if first not in (b"\x00", b"\xe0"):
-        return None
-
-    second = msvcrt.getch()
-
-    if second == b"M":
-        return "right"
-
-    if second == b"K":
-        return "left"
-
-    return None
 
 
 class RobotMarker(QFrame):
@@ -417,7 +393,7 @@ class TopDisplayWindow(QWidget):
             current_ms = self.player.get_time()
             elapsed = time.monotonic() - start_time
 
-            key = _read_arrow_key_windows()
+            key = read_arrow_key_windows()
 
             if key == "right":
                 new_time = min(current_ms + 10_000, duration_ms - 1000)

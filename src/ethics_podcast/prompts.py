@@ -55,13 +55,6 @@ AQUINAS_PROMPT = (
 )
 
 
-ROBOT_NAMES = {
-    "student": "Bentham-Bot",
-    "professor": "Korsgaard-Bot",
-    "moderator": "Aquinas-Bot",
-}
-
-
 # Aliases for orchestrator.py's two-robot live mode. The orchestrator runs
 # Bentham (student) vs Korsgaard (professor) only; Aquinas is reserved for the
 # three-robot recorded mode that goes through generator.py + player.py.
@@ -72,24 +65,6 @@ OPENING_SEED = (
     "Briefly introduce yourself as Bentham-Bot, then ask a single concrete "
     "ethical question about modern technology — keep it under 30 words."
 )
-
-ROBOT_LAYOUT = {
-    "student": {
-        "name": "Bentham-Bot",
-        "position": "left",
-        "pan": -0.85,
-    },
-    "professor": {
-        "name": "Korsgaard-Bot",
-        "position": "center",
-        "pan": 0.0,
-    },
-    "moderator": {
-        "name": "Aquinas-Bot",
-        "position": "right",
-        "pan": 0.85,
-    },
-}
 
 
 # ── Sessions ────────────────────────────────────────────────────────────────
@@ -257,14 +232,4 @@ def closing_nudge_professor(total_turns: int) -> str:
         "Briefly summarize the Kantian point. "
         "Mention duty, agency, respect, and the reasons behind action. "
         "Say goodbye as Korsgaard-Bot."
-    )
-
-
-def closing_nudge_moderator(total_turns: int) -> str:
-    """Closing instruction for Aquinas-Bot."""
-    return (
-        "This is your LAST turn. "
-        "Briefly summarize the virtue ethics point. "
-        "Mention purpose, virtue, flourishing, and the common good. "
-        "Say goodbye as Aquinas-Bot."
     )

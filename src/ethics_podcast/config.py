@@ -45,6 +45,11 @@ class Config:
     inter_turn_pause: float = 1.0
     max_response_tokens: int = 200
 
+    # Extra playback delays (seconds) applied only in the "hybrid_surround"
+    # audio mode, to align the TV/room speakers with the robot speakers.
+    tv_audio_delay: float = 0.0
+    robot_audio_delay: float = 0.0
+
     # Multi-display exhibit layout
     display_top_monitor: int = 0
     # Monitor index per role, in (student, professor, moderator) order.
@@ -100,6 +105,9 @@ class Config:
             ),
 
             inter_turn_pause=float(os.environ.get("INTER_TURN_PAUSE", "1.0")),
+
+            tv_audio_delay=float(os.environ.get("TV_AUDIO_DELAY", "0.0")),
+            robot_audio_delay=float(os.environ.get("ROBOT_AUDIO_DELAY", "0.0")),
 
             display_top_monitor=int(os.environ.get("DISPLAY_TOP_MONITOR", "0")),
             display_mini_monitors=_parse_mini_monitors(
