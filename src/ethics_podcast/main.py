@@ -8,6 +8,7 @@ Robots:
   - Fellow = Aquinas-Bot
 
 Phases:
+  0. Setup — discover robots, assign roles, and refresh IPs
   1. Generate — runs the AI conversation, saves audio + transcripts to disk
   2. Play    — plays the saved conversation through the robots
   3. Restart & Wake — restarts daemons, wakes robots, verifies audio works
@@ -210,41 +211,82 @@ def _print_audio_mode(audio_mode: str) -> None:
 
 # ── Setup robots ───────────────────────────────────────────────────────────
 
-def _setup_robots() -> Config | None:
-    """Discover robots on the network, identify them, and write IPs to .env."""
+def _env_path() -> "Path":
     from pathlib import Path
+
+    return Path(__file__).resolve().parent.parent.parent / ".env"
+
+
+def _set_env(lines: list[str], key: str, value: str) -> list[str]:
+    """Replace KEY=... in place, or append it if missing."""
+    for i, line in enumerate(lines):
+        if line.startswith(f"{key}="):
+            lines[i] = f"{key}={value}"
+            return lines
+
+    lines.append(f"{key}={value}")
+    return lines
+
+
+def _discover_robots() -> list[dict]:
+    """Find Reachy Mini robots on the network.
+
+    Tries mDNS discovery first, then falls back to scanning the local /24
+    subnet for daemons on port 8000. Returns a list of dicts shaped like
+    {name, host, addresses, props}.
+    """
     import subprocess as sp
     import concurrent.futures
     import json
     import socket
-    from dotenv import load_dotenv
 
-    env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    def _local_subnets() -> list[str]:
+        """Return every local IPv4 /24 prefix (e.g. '192.168.137') this PC has.
 
-    def _get_local_subnet() -> str | None:
-        """Get the current local subnet like '10.58.209' from this computer."""
+        Robots may live on a different interface than the default route (e.g.
+        the Windows mobile hotspot at 192.168.137.x while the internet goes
+        out over campus Wi-Fi), so we scan all of them, not just the route to
+        8.8.8.8.
+        """
+        prefixes: list[str] = []
+
+        def _add(ip: str) -> None:
+            parts = ip.split(".")
+            if len(parts) == 4 and not ip.startswith("127."):
+                prefix = ".".join(parts[:3])
+                if prefix not in prefixes:
+                    prefixes.append(prefix)
+
+        # Default-route interface first (most likely to also host robots).
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-            # This does not actually send traffic to Google.
-            # It only lets Windows choose the active network interface.
-            s.connect(("8.8.8.8", 80))
-
-            local_ip = s.getsockname()[0]
+            s.connect(("8.8.8.8", 80))  # no traffic sent; picks an interface
+            _add(s.getsockname()[0])
             s.close()
-
-            parts = local_ip.split(".")
-
-            if len(parts) == 4:
-                return ".".join(parts[:3])
-
         except Exception:
-            return None
+            pass
 
-        return None
+        # All addresses bound to this host (covers hotspot, Ethernet, etc.).
+        try:
+            for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+                _add(info[4][0])
+        except Exception:
+            pass
+
+        return prefixes
 
     print("\n  Scanning network for Reachy Mini robots...")
 
+    robots_info: list[dict] = []
+    seen_ips: set[str] = set()
+
+    def _add_robot(robot: dict) -> None:
+        ip = _robot_ip(robot)
+        if ip and ip not in seen_ips:
+            seen_ips.add(ip)
+            robots_info.append(robot)
+
+    # 1) Try the SDK's discovery first.
     result = sp.run(
         [
             "python",
@@ -260,70 +302,178 @@ def _setup_robots() -> Config | None:
         env={**os.environ},
     )
 
-    if result.returncode != 0 or not result.stdout.strip():
-        subnet = _get_local_subnet()
+    if result.returncode == 0 and result.stdout.strip():
+        try:
+            for robot in json.loads(result.stdout.strip()):
+                _add_robot(robot)
+        except Exception:
+            pass
 
-        if subnet is None:
-            print("  mDNS discovery failed.")
-            print("  Could not detect this computer's local subnet.")
-            print("  Falling back to 10.25.31.0/24.")
-            subnet = "10.25.31"
-        else:
-            print(f"  mDNS discovery failed. Scanning {subnet}.0/24 for daemons...")
+    # 2) Always scan local subnets too, because mDNS often misses some robots.
+    subnets = _local_subnets()
 
-        found = []
+    if not subnets:
+        print("  Could not detect this computer's local subnet.")
+        print("  Falling back to 10.25.31.0/24.")
+        subnets = ["10.25.31"]
+    else:
+        joined = ", ".join(f"{s}.0/24" for s in subnets)
+        print(f"  Scanning {joined} for daemons...")
 
-        def _check(ip_num: int):
-            ip = f"{subnet}.{ip_num}"
+    def _check(prefix: str, ip_num: int):
+        ip = f"{prefix}.{ip_num}"
 
-            try:
-                r = requests.get(
-                    f"http://{ip}:8000/api/daemon/status",
-                    timeout=1.5,
+        try:
+            r = requests.get(
+                f"http://{ip}:8000/api/daemon/status",
+                timeout=1.5,
+            )
+
+            if r.status_code == 200:
+                data = r.json()
+
+                robot_name = (
+                    data.get("robot_name")
+                    or data.get("name")
+                    or "unknown"
                 )
 
-                if r.status_code == 200:
-                    data = r.json()
+                return {
+                    "name": robot_name,
+                    "host": ip,
+                    "addresses": [ip],
+                    "props": {"robot_name": robot_name},
+                }
 
-                    robot_name = (
-                        data.get("robot_name")
-                        or data.get("name")
-                        or "unknown"
-                    )
+        except Exception:
+            pass
 
-                    return {
-                        "name": robot_name,
-                        "host": ip,
-                        "addresses": [ip],
-                        "props": {"robot_name": robot_name},
-                    }
+        return None
 
-            except Exception:
-                pass
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as pool:
+        futures = [
+            pool.submit(_check, prefix, i)
+            for prefix in subnets
+            for i in range(1, 255)
+        ]
 
-            return None
+        for future in concurrent.futures.as_completed(futures):
+            robot = future.result()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as pool:
-            futures = {pool.submit(_check, i): i for i in range(1, 255)}
+            if robot:
+                _add_robot(robot)
 
-            for future in concurrent.futures.as_completed(futures):
-                robot = future.result()
+    return robots_info
 
-                if robot:
-                    found.append(robot)
 
-        robots_info = found
+def _robot_name(robot: dict) -> str:
+    return robot.get("props", {}).get("robot_name", robot.get("name", "unknown"))
 
+
+def _robot_ip(robot: dict) -> str:
+    addresses = robot.get("addresses") or []
+    return addresses[0] if addresses else robot.get("host", "unknown")
+
+
+def _print_discovered_robot_dashboards(robots_info: list[dict]) -> None:
+    """Print dashboard URLs for robots found during discovery."""
+    print("\n  Detected robot dashboards:")
+
+    for i, robot in enumerate(robots_info):
+        ip = _robot_ip(robot)
+        name = _robot_name(robot)
+        print(f"    {i + 1}. {name}: http://{ip}:8000")
+
+
+def _auto_assign_robots(config: Config) -> Config | None:
+    """Discover robots and refresh their IPs in .env, no manual identification.
+
+    Keeps the existing role→robot assignment by matching each robot's name
+    (ROBOT_A/B/C_NAME already in .env) to a discovered robot, then rewrites
+    only the host IPs. Any role whose name is not matched is filled, in
+    discovery order, from the leftover robots. Prints each robot's daemon
+    dashboard URL when done.
+    """
+    from dotenv import load_dotenv
+
+    env_path = _env_path()
+    robots_info = _discover_robots()
+
+    if not robots_info:
+        print("  No robots found. Make sure they are powered on and on this network.")
+        return None
+
+    # Map discovered robots by (lowercased) name.
+    by_name: dict[str, dict] = {}
+    for robot in robots_info:
+        name = _robot_name(robot)
+        if name and name != "unknown":
+            by_name[name.strip().lower()] = robot
+
+    targets = [
+        ("ROBOT_A_HOST", config.robot_a.name, "Bentham-Bot / Left"),
+        ("ROBOT_B_HOST", config.robot_b.name, "Korsgaard-Bot / Center"),
+        ("ROBOT_C_HOST", config.robot_c.name, "Aquinas-Bot / Right"),
+    ]
+
+    resolved: dict[str, str] = {}
+    used_ips: set[str] = set()
+
+    # Pass 1: match each role to a robot by name.
+    for key, name, _label in targets:
+        nl = (name or "").strip().lower()
+        if nl and nl in by_name:
+            ip = _robot_ip(by_name[nl])
+            resolved[key] = ip
+            used_ips.add(ip)
+
+    # Pass 2: fill unmatched roles from leftover robots (discovery order).
+    leftover = [
+        _robot_ip(r) for r in robots_info if _robot_ip(r) not in used_ips
+    ]
+    for key, name, label in targets:
+        if key not in resolved and leftover:
+            ip = leftover.pop(0)
+            resolved[key] = ip
+            used_ips.add(ip)
+            print(f"    {label}: name '{name}' not found; assigned {ip} by order.")
+
+    if not resolved:
+        print("  Could not resolve any robot IPs.")
+        return None
+
+    # Write the refreshed IPs to .env.
+    if env_path.exists():
+        lines = env_path.read_text(encoding="utf-8").splitlines()
     else:
-        robots_info = json.loads(result.stdout.strip())
+        lines = []
 
-    if len(robots_info) < 3:
-        print(f"  Found only {len(robots_info)} robot(s). Need 3 for this podcast.")
+    for key, ip in resolved.items():
+        lines = _set_env(lines, key, ip)
 
-        for robot in robots_info:
-            print(f"    Found: {robot.get('name')} at {robot.get('addresses')}")
+    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    load_dotenv(env_path, override=True)
 
-        print("  Make sure all three robots are powered on and connected to the same network.")
+    new_config = Config.from_env()
+
+    print("\n  .env updated. Robot dashboards:")
+    print(f"    Bentham-Bot / Left:      http://{new_config.robot_a.host}:8000")
+    print(f"    Korsgaard-Bot / Center:  http://{new_config.robot_b.host}:8000")
+    print(f"    Aquinas-Bot / Right:     http://{new_config.robot_c.host}:8000")
+
+    return new_config
+
+
+def _setup_robots() -> Config | None:
+    """Discover robots on the network, identify them, and write IPs to .env."""
+    from dotenv import load_dotenv
+
+    env_path = _env_path()
+
+    robots_info = _discover_robots()
+
+    if not robots_info:
+        print("  No robots found. Make sure they are powered on and connected to this network.")
         return None
 
     print(f"  Found {len(robots_info)} robots:")
@@ -334,6 +484,13 @@ def _setup_robots() -> Config | None:
         name = robot.get("props", {}).get("robot_name", robot.get("name", "unknown"))
 
         print(f"    {i + 1}. {name} at {ip}")
+
+    _print_discovered_robot_dashboards(robots_info)
+
+    if len(robots_info) < 3:
+        print(f"\n  Found only {len(robots_info)} robot(s). Need 3 to assign all podcast roles.")
+        print("  Check the missing robots, then run setup again.")
+        return None
 
     print("\n  Waking up robots...")
 
@@ -435,13 +592,6 @@ def _setup_robots() -> Config | None:
     robot_b_info = robots_info[robot_b_i]
     robot_c_info = robots_info[robot_c_i]
 
-    def _robot_name(robot):
-        return robot.get("props", {}).get("robot_name", robot.get("name", "unknown"))
-
-    def _robot_ip(robot):
-        addresses = robot.get("addresses") or []
-        return addresses[0] if addresses else robot.get("host", "unknown")
-
     ip_a = _robot_ip(robot_a_info)
     ip_b = _robot_ip(robot_b_info)
     ip_c = _robot_ip(robot_c_info)
@@ -466,15 +616,6 @@ def _setup_robots() -> Config | None:
     else:
         lines = []
 
-    def _set_env(lines: list[str], key: str, value: str) -> list[str]:
-        for i, line in enumerate(lines):
-            if line.startswith(f"{key}="):
-                lines[i] = f"{key}={value}"
-                return lines
-
-        lines.append(f"{key}={value}")
-        return lines
-
     lines = _set_env(lines, "ROBOT_A_HOST", ip_a)
     lines = _set_env(lines, "ROBOT_B_HOST", ip_b)
     lines = _set_env(lines, "ROBOT_C_HOST", ip_c)
@@ -491,7 +632,14 @@ def _setup_robots() -> Config | None:
 
     load_dotenv(env_path, override=True)
 
-    return Config.from_env()
+    new_config = Config.from_env()
+
+    print("\n  Robot dashboards:")
+    print(f"    Bentham-Bot / Left:      http://{new_config.robot_a.host}:8000")
+    print(f"    Korsgaard-Bot / Center:  http://{new_config.robot_b.host}:8000")
+    print(f"    Aquinas-Bot / Right:     http://{new_config.robot_c.host}:8000")
+
+    return new_config
 
 
 # ── Session picker ─────────────────────────────────────────────────────────
@@ -599,7 +747,7 @@ def main() -> None:
             print("  (Voice activation ON, say 'Mellow, let's start the podcast')")
 
         print()
-        print("0. Setup, Discover & assign robots")
+        print("0. Setup, Discover, assign & refresh robots")
         print("1. Generate Conversation")
         print("2. Play on Robots")
         print("3. Restart & Wake Robots")
