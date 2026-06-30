@@ -41,8 +41,11 @@ VIDEO_ITEMS = [
     {
         "title": "AI and the Environment",
         "video_path": _prefer_existing(
-            "videos/Aiden_Environment_Video.mp4",
+            # Prefer the lighter webm: the big mp4 (~100 MB) can't stream over
+            # Wi-Fi fast enough and stalls the browser video. Falls back to mp4
+            # when no webm exists.
             "videos/Aiden_Environment_Video.webm",
+            "videos/Aiden_Environment_Video.mp4",
         ),
         "transcript_path": Path("transcripts/Aiden_Environment_Video.txt"),
         "playback_session": "video_environment",
@@ -54,8 +57,8 @@ VIDEO_ITEMS = [
     {
         "title": "AI and the Military",
         "video_path": _prefer_existing(
-            "videos/Aiden_Military_Video.mp4",
             "videos/Aiden_Military_Video.webm",
+            "videos/Aiden_Military_Video.mp4",
         ),
         "transcript_path": Path("transcripts/Aiden_Military_Video.txt"),
         "playback_session": "video_military",
@@ -67,8 +70,8 @@ VIDEO_ITEMS = [
     {
         "title": "AI and Relationships",
         "video_path": _prefer_existing(
-            "videos/Aiden_Relationship_Video.mp4",
             "videos/Aiden_Relationship_Video.webm",
+            "videos/Aiden_Relationship_Video.mp4",
         ),
         "transcript_path": Path("transcripts/Aiden_Relationship_Video.txt"),
         "playback_session": "video_relationship",
@@ -80,8 +83,9 @@ VIDEO_ITEMS = [
     {
         "title": "AI and Human Achievement",
         "video_path": _prefer_existing(
-            "videos/Aiden_Achievment_video.mp4",
+            # No webm rendered yet — this falls back to the mp4.
             "videos/Aiden_Achievment_video.webm",
+            "videos/Aiden_Achievment_video.mp4",
         ),
         "transcript_path": Path("transcripts/Aiden_Achievment_video.txt"),
         "playback_session": "video_achievement",

@@ -116,6 +116,12 @@ SPEECH_PAN = {
 # playback loop gives up and moves on (in case no top display is connected).
 VIDEO_END_TIMEOUT = 1800.0
 
+# Media files are served from per-run URLs (tagged with the boot id), so the
+# browser must never reuse a cached body: across runs the same ?token= number
+# would otherwise hit a stale entry (e.g. a video whose file changed from mp4 to
+# webm), splicing old bytes into the new stream and freezing playback.
+NO_STORE_HEADERS = {"Cache-Control": "no-store"}
+
 
 def _local_ip() -> str:
     """Best-effort LAN IP of this machine (no traffic is actually sent)."""
@@ -306,7 +312,7 @@ class WebDisplayManager:
                 return Response(status_code=404)
             self._log_media_hit("/video/current", request)
             # FileResponse handles HTTP range requests (seeking) for us.
-            return FileResponse(str(self.video_path))
+            return FileResponse(str(self.video_path), headers=NO_STORE_HEADERS)
 
         @app.get("/speech/current")
         async def speech_current(request: Request) -> Response:
@@ -317,7 +323,7 @@ class WebDisplayManager:
             # Serve a small MP3 instead of the multi-MB WAV when possible.
             served = await self._get_web_audio(wav)
             self._log_media_hit("/speech/current", request)
-            return FileResponse(str(served))
+            return FileResponse(str(served), headers=NO_STORE_HEADERS)
 
         @app.get("/bgm/current")
         async def bgm_current(request: Request) -> Response:
@@ -328,7 +334,7 @@ class WebDisplayManager:
             self._log_media_hit("/bgm/current", request)
             # BGM files are already MP3; FileResponse handles range requests
             # so the browser can loop them smoothly.
-            return FileResponse(str(bgm))
+            return FileResponse(str(bgm), headers=NO_STORE_HEADERS)
 
         @app.websocket("/ws/{channel}")
         async def ws(websocket: WebSocket, channel: str) -> None:
@@ -476,16 +482,23 @@ class WebDisplayManager:
             queue.put_nowait(tagged)
 
     def _broadcast_top(self) -> None:
+        # Tag every media URL with the boot id as well as the per-clip token.
+        # The token alone resets to the same 1,2,3… each run, so a stale browser
+        # cache from a previous run (different file, same ?token=) would be
+        # reused; the boot id makes the URL unique per run and defeats that.
+        boot = self._boot_id
         self._top["videoSrc"] = (
-            f"/video/current?token={self._video_token}" if self.video_path else ""
+            f"/video/current?token={self._video_token}&v={boot}"
+            if self.video_path
+            else ""
         )
         self._top["speechAudioSrc"] = (
-            f"/speech/current?token={self._top['speechAudioEpoch']}"
+            f"/speech/current?token={self._top['speechAudioEpoch']}&v={boot}"
             if self.speech_audio_path
             else ""
         )
         self._top["bgmSrc"] = (
-            f"/bgm/current?token={self._bgm_epoch}" if self.bgm_audio_path else ""
+            f"/bgm/current?token={self._bgm_epoch}&v={boot}" if self.bgm_audio_path else ""
         )
         msg = dict(self._top)
         self._latest["top"] = msg

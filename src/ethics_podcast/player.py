@@ -745,6 +745,16 @@ async def run_playback_with_connected_robots(
         print("\nPlayback complete!")
         _diag(f"playback_complete session={session_name}")
 
+        # Natural end of the discussion: fade the BGM out gently. (The finally
+        # below still hard-stops as a safety net for Ctrl+C / exceptions.)
+        if bgm is not None:
+            await bgm.stop()
+        elif use_browser_bgm and display is not None:
+            try:
+                display.stop_bgm()
+            except Exception:
+                pass
+
     finally:
         _diag(f"playback_cleanup session={session_name}")
         if ui is not None:

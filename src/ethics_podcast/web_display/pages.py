@@ -311,6 +311,31 @@ const vid = document.getElementById('vid');
 const speechAudio = document.getElementById('speech-audio');
 const bgmAudio = document.getElementById('bgm');
 let curBgmSrc = '';
+// BGM fades in when a discussion starts and out when it ends, so it never
+// snaps on/off. The steady-state volume comes from the server (bgmVolume).
+let bgmTargetVolume = 0.18;
+let bgmFadeTimer = null;
+const BGM_FADE_IN_MS = 2000;
+const BGM_FADE_OUT_MS = 1500;
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+function clearBgmFade() {
+  if (bgmFadeTimer !== null) { clearInterval(bgmFadeTimer); bgmFadeTimer = null; }
+}
+// Ramp the BGM element volume to `to` over `ms`, then run onDone (if any). The
+// timer runs independently of play state, so a fade still completes even while
+// autoplay is blocked.
+function fadeBgm(to, ms, onDone) {
+  clearBgmFade();
+  to = clamp01(to);
+  const from = clamp01(bgmAudio.volume);
+  if (ms <= 0 || from === to) { bgmAudio.volume = to; if (onDone) onDone(); return; }
+  const startedAt = Date.now();
+  bgmFadeTimer = setInterval(() => {
+    const t = Math.min(1, (Date.now() - startedAt) / ms);
+    bgmAudio.volume = clamp01(from + (to - from) * t);
+    if (t >= 1) { clearBgmFade(); if (onDone) onDone(); }
+  }, 30);
+}
 // All exhibit audio lives in the browser, so muting just gates these elements.
 function applyMute(s) {
   if (typeof s.muted !== 'boolean') return;
@@ -328,17 +353,26 @@ function tryPlayBgm() {
   });
 }
 function applyBgm(s) {
+  if (typeof s.bgmVolume === 'number') bgmTargetVolume = clamp01(s.bgmVolume);
   if (s.bgmSrc && s.bgmSrc !== curBgmSrc) {
+    // New track: start silent and fade in.
     curBgmSrc = s.bgmSrc;
     bgmAudio.src = s.bgmSrc;
     bgmAudio.loop = true;
+    bgmAudio.volume = 0;
     bgmAudio.load();
     tryPlayBgm();
+    fadeBgm(bgmTargetVolume, BGM_FADE_IN_MS);
   } else if (!s.bgmSrc && curBgmSrc) {
+    // Track removed: fade out, then release the element.
     curBgmSrc = '';
-    try { bgmAudio.pause(); bgmAudio.removeAttribute('src'); bgmAudio.load(); } catch (e) {}
+    fadeBgm(0, BGM_FADE_OUT_MS, () => {
+      try { bgmAudio.pause(); bgmAudio.removeAttribute('src'); bgmAudio.load(); } catch (e) {}
+    });
+  } else if (s.bgmSrc && bgmFadeTimer === null) {
+    // Same track, a volume update arrived outside a fade — apply it directly.
+    bgmAudio.volume = bgmTargetVolume;
   }
-  if (typeof s.bgmVolume === 'number') bgmAudio.volume = Math.max(0, Math.min(1, s.bgmVolume));
 }
 const fadeCurtain = document.getElementById('fade-curtain');
 const gaze = createGaze(document.getElementById('gaze'), CFG.glowRgb);
@@ -529,6 +563,7 @@ function stopAllMedia() {
     speechAudio.load();
   } catch (e) {}
   try {
+    clearBgmFade();
     bgmAudio.pause();
     bgmAudio.removeAttribute('src');
     bgmAudio.load();
