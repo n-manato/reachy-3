@@ -250,6 +250,25 @@ def add_introductions_to_conversation(session_name: str) -> None:
         print("  No introductions were added. Check speaker/text keys in conversation.json.")
 
 
+ROLE_ROSTER = (
+    ("student", "Bentham-Bot / Left", "robot_a"),
+    ("professor", "Korsgaard-Bot / Center", "robot_b"),
+    ("moderator", "Aquinas-Bot / Right", "robot_c"),
+)
+
+
+def _print_robot_roster(config) -> None:
+    """Print the role→robot roster, marking any absent seat in 2-robot mode."""
+    two_robot = config.robot_mode == 2
+    if two_robot:
+        print(f"  Robot mode: 2 robots ({len(config.active_roles())} active seats)")
+
+    for role, label, attr in ROLE_ROSTER:
+        robot = getattr(config, attr)
+        absent = "   [2-robot mode: ABSENT, voice on TV only]" if not config.is_role_active(role) else ""
+        print(f"  {label + ':':24} {robot.name or '?'} ({robot.host}){absent}")
+
+
 def _print_audio_mode(audio_mode: AudioMode) -> None:
     """Print current audio mode."""
     if audio_mode == "robot":
@@ -377,9 +396,7 @@ async def run_video_discussion_loop(
     _print_audio_mode(audio_mode)
 
     print()
-    print(f"  Bentham-Bot / Left:      {config.robot_a.name or '?'} ({config.robot_a.host})")
-    print(f"  Korsgaard-Bot / Center:  {config.robot_b.name or '?'} ({config.robot_b.host})")
-    print(f"  Aquinas-Bot / Right:     {config.robot_c.name or '?'} ({config.robot_c.host})")
+    _print_robot_roster(config)
 
     await prepare_all_discussions(config)
 
@@ -395,6 +412,7 @@ async def run_video_discussion_loop(
         config.robot_b,
         config.robot_c,
         use_media=use_media,
+        disabled_roles=config.disabled_roles(),
     )
 
     print("  Robots are connected and ready.")

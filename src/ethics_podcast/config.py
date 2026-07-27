@@ -41,6 +41,17 @@ class Config:
     robot_b: RobotConfig  # Mellow, Korsgaard-Bot
     robot_c: RobotConfig  # Fellow, Aquinas-Bot
 
+    # ── Robot count mode ────────────────────────────────────────────────────
+    # robot_mode = 3 (default) drives all three robots.
+    # robot_mode = 2 runs the exhibit with one robot physically absent (e.g. a
+    # broken unit). The conversation content stays 3-person: the absent robot's
+    # persona still speaks through the TV / browser audio, but no physical robot
+    # is connected or moved for it — its controller becomes a MockRobot.
+    # ``disabled_role`` names which role is absent (only meaningful when
+    # robot_mode == 2); the default is the center robot, Korsgaard-Bot.
+    robot_mode: int = 3
+    disabled_role: str | None = None
+
     # Turn management
     inter_turn_pause: float = 1.0
     max_response_tokens: int = 200
@@ -66,6 +77,9 @@ class Config:
     display_web_host: str = "0.0.0.0"
     display_web_port: int = 8000
 
+    # Internal roles, in fixed left→center→right order.
+    ROLE_ORDER = ("student", "professor", "moderator")
+
     @classmethod
     def from_env(cls) -> "Config":
         api_key = os.environ.get("OPENAI_API_KEY", "")
@@ -75,6 +89,15 @@ class Config:
         eleven_key = os.environ.get("ELEVENLABS_API_KEY", "")
         if not eleven_key:
             raise ValueError("ELEVENLABS_API_KEY environment variable is required")
+
+        robot_mode = _parse_robot_mode(os.environ.get("ROBOT_MODE", "3"))
+        # Only meaningful in 2-robot mode; default absent seat is the center
+        # robot (Korsgaard-Bot / professor).
+        disabled_role = (
+            _parse_disabled_role(os.environ.get("DISABLED_ROLE", "professor"))
+            if robot_mode == 2
+            else None
+        )
 
         return cls(
             openai_api_key=api_key,
@@ -104,6 +127,9 @@ class Config:
                 role="moderator",
             ),
 
+            robot_mode=robot_mode,
+            disabled_role=disabled_role,
+
             inter_turn_pause=float(os.environ.get("INTER_TURN_PAUSE", "1.0")),
 
             tv_audio_delay=float(os.environ.get("TV_AUDIO_DELAY", "0.0")),
@@ -121,9 +147,66 @@ class Config:
             display_web_port=int(os.environ.get("DISPLAY_WEB_PORT", "8000")),
         )
 
+    # ── Robot-mode helpers ──────────────────────────────────────────────────
+
+    def role_configs(self) -> dict[str, RobotConfig]:
+        """Map each internal role to its RobotConfig (all three, in order)."""
+        return {
+            "student": self.robot_a,
+            "professor": self.robot_b,
+            "moderator": self.robot_c,
+        }
+
+    def disabled_roles(self) -> frozenset[str]:
+        """Roles with no physical robot (empty in 3-robot mode)."""
+        if self.robot_mode == 2 and self.disabled_role:
+            return frozenset({self.disabled_role})
+        return frozenset()
+
+    def is_role_active(self, role: str) -> bool:
+        """True when a physical robot is expected for this role."""
+        return role not in self.disabled_roles()
+
+    def active_roles(self) -> tuple[str, ...]:
+        """Roles that have a physical robot, in left→center→right order."""
+        disabled = self.disabled_roles()
+        return tuple(r for r in self.ROLE_ORDER if r not in disabled)
+
 
 def _parse_bool(value: str) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _parse_robot_mode(value: str) -> int:
+    """Parse ROBOT_MODE into 2 or 3 (defaults to 3 for anything unexpected)."""
+    return 2 if value.strip() == "2" else 3
+
+
+# Accept a few friendly aliases for the disabled seat so .env can say either the
+# internal role or the philosopher/position.
+_ROLE_ALIASES = {
+    "student": "student",
+    "bentham": "student",
+    "bentham-bot": "student",
+    "left": "student",
+    "a": "student",
+    "professor": "professor",
+    "korsgaard": "professor",
+    "korsgaard-bot": "professor",
+    "center": "professor",
+    "centre": "professor",
+    "b": "professor",
+    "moderator": "moderator",
+    "aquinas": "moderator",
+    "aquinas-bot": "moderator",
+    "right": "moderator",
+    "c": "moderator",
+}
+
+
+def _parse_disabled_role(value: str) -> str:
+    """Normalize DISABLED_ROLE to an internal role name (default professor)."""
+    return _ROLE_ALIASES.get(value.strip().lower(), "professor")
 
 
 def _parse_mini_monitors(value: str) -> tuple[int, int, int]:

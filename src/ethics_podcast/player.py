@@ -808,6 +808,7 @@ async def run_playback(
         config.robot_a,
         config.robot_b,
         config.robot_c,
+        disabled_roles=config.disabled_roles(),
     )
 
     rng = np.random.default_rng(42)

@@ -548,42 +548,72 @@ async def connect_robots(
     *configs: Any,
     use_media: bool = False,
     allow_partial: bool = True,
+    disabled_roles: "frozenset[str] | set[str] | None" = None,
 ) -> tuple[RobotController, ...]:
     """Start robot subprocesses simultaneously.
 
     Works with 2 robots or 3 robots. When ``allow_partial`` is true, robots
     that fail to connect are replaced with MockRobot so the exhibit can still
     run with the robots that are available.
+
+    ``disabled_roles`` names roles that have no physical robot (2-robot mode).
+    Those are never contacted: a MockRobot stands in from the start, so there is
+    no connection attempt, timeout, or mid-show reconnect churn for the absent
+    unit. The returned tuple stays in the same order as ``configs`` (so callers
+    that unpack robot_a, robot_b, robot_c keep working), with a MockRobot in the
+    disabled position.
     """
+    disabled_roles = frozenset(disabled_roles or ())
+
+    from ethics_podcast.mock_robot import MockRobot
+
     # Clear out any orphaned workers from a previous crashed run before we
     # spawn fresh ones, so they cannot fight over the robots' sessions.
     kill_stale_workers()
 
-    controllers = [
-        RobotController(
-            config.host,
-            config.name,
-            config.role,
-            use_media=use_media,
-        )
-        for config in configs
-    ]
+    # Only build/start real controllers for active roles; disabled roles get a
+    # MockRobot placeholder without ever spawning a worker.
+    controllers: list[Any] = []
+    to_start: list[RobotController] = []
+    for config in configs:
+        if getattr(config, "role", None) in disabled_roles:
+            controllers.append(
+                MockRobot(getattr(config, "role", "unknown"), getattr(config, "name", None))
+            )
+        else:
+            controller = RobotController(
+                config.host,
+                config.name,
+                config.role,
+                use_media=use_media,
+            )
+            controllers.append(controller)
+            to_start.append(controller)
 
     loop = asyncio.get_running_loop()
 
     results = await asyncio.gather(
         *[
             loop.run_in_executor(None, controller.start)
-            for controller in controllers
+            for controller in to_start
         ],
         return_exceptions=allow_partial,
     )
+
+    # Map each started controller back to its start() result.
+    result_by_controller = dict(zip(to_start, results))
 
     if not allow_partial:
         return tuple(controllers)
 
     active = []
-    for config, controller, result in zip(configs, controllers, results):
+    for config, controller in zip(configs, controllers):
+        # Disabled-role placeholders (already MockRobot) pass through untouched.
+        if not isinstance(controller, RobotController):
+            active.append(controller)
+            continue
+
+        result = result_by_controller.get(controller)
         if isinstance(result, Exception):
             logger.warning(
                 "Robot %s (%s) could not connect: %s. Using mock fallback.",

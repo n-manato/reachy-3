@@ -33,6 +33,7 @@ from ethics_podcast.video_discussion import (
     prepare_all_discussions,
     reset_then_power_off_all,
     _print_audio_mode,
+    _print_robot_roster,
 )
 
 
@@ -64,10 +65,7 @@ async def run_multi_display_discussion_loop(
         print("  DEMO MODE: mock robots, audio on computer speakers.")
     _print_audio_mode(audio_mode)
 
-    print()
-    print(f"  Bentham-Bot / Left:      {config.robot_a.name or '?'} ({config.robot_a.host})")
-    print(f"  Korsgaard-Bot / Center:  {config.robot_b.name or '?'} ({config.robot_b.host})")
-    print(f"  Aquinas-Bot / Right:     {config.robot_c.name or '?'} ({config.robot_c.host})")
+    _print_robot_roster(config)
     print(
         f"  Displays: top=monitor {config.display_top_monitor}, "
         f"mini={config.display_mini_monitors}, "
@@ -95,6 +93,7 @@ async def run_multi_display_discussion_loop(
             config.robot_b,
             config.robot_c,
             use_media=use_media,
+            disabled_roles=config.disabled_roles(),
         )
 
         print("  Robots are connected and ready.")

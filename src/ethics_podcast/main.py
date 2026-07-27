@@ -29,6 +29,21 @@ import requests
 from ethics_podcast.config import Config
 
 
+# Internal role → (display label, Config attribute), in left→center→right order.
+_ROLE_ROSTER = (
+    ("student", "Bentham-Bot / Left", "robot_a"),
+    ("professor", "Korsgaard-Bot / Center", "robot_b"),
+    ("moderator", "Aquinas-Bot / Right", "robot_c"),
+)
+
+# Role → (host env key, name env key) for writing IPs during Setup.
+_ROLE_ENV = {
+    "student": ("ROBOT_A_HOST", "ROBOT_A_NAME"),
+    "professor": ("ROBOT_B_HOST", "ROBOT_B_NAME"),
+    "moderator": ("ROBOT_C_HOST", "ROBOT_C_NAME"),
+}
+
+
 def _web_display_config(config: Config) -> Config:
     """Force the browser display backend for the multi-display exhibit."""
     return replace(config, display_backend="web")
@@ -389,11 +404,20 @@ def _restart_robots(config: Config) -> None:
     """Restart configured robot daemons and print status URLs."""
     import concurrent.futures
 
+    # Only restart robots that actually exist. In 2-robot mode the absent seat
+    # is skipped so we do not hang on a broken / powered-off unit.
     targets = [
-        ("Bentham-Bot / Left", config.robot_a.name, config.robot_a.host),
-        ("Korsgaard-Bot / Center", config.robot_b.name, config.robot_b.host),
-        ("Aquinas-Bot / Right", config.robot_c.name, config.robot_c.host),
+        (label, getattr(config, attr).name, getattr(config, attr).host)
+        for role, label, attr in _ROLE_ROSTER
+        if config.is_role_active(role)
     ]
+
+    if config.robot_mode == 2:
+        skipped = [
+            label for role, label, _ in _ROLE_ROSTER if not config.is_role_active(role)
+        ]
+        if skipped:
+            print(f"\n  2-robot mode: skipping absent seat(s): {', '.join(skipped)}")
 
     by_host: dict[str, list[tuple[str, str | None]]] = {}
     for label, name, host in targets:
@@ -590,8 +614,13 @@ def _auto_assign_robots(config: Config) -> Config | None:
     return new_config
 
 
-def _setup_robots() -> Config | None:
-    """Discover robots on the network, identify them, and write IPs to .env."""
+def _setup_robots(config: Config) -> Config | None:
+    """Discover robots on the network, identify them, and write IPs to .env.
+
+    Only the *active* roles are assigned. In 2-robot mode the absent seat is
+    skipped entirely and its existing ROBOT_*_HOST/NAME in .env are left as-is,
+    so switching back to 3-robot mode later needs no re-setup.
+    """
     from dotenv import load_dotenv
 
     env_path = _env_path()
@@ -613,14 +642,25 @@ def _setup_robots() -> Config | None:
 
     _print_discovered_robot_dashboards(robots_info)
 
-    if len(robots_info) < 3:
-        print(f"\n  Found only {len(robots_info)} robot(s). Need 3 to assign all podcast roles.")
+    active_roles = config.active_roles()
+    needed = len(active_roles)
+    active_labels = {role: label for role, label, _ in _ROLE_ROSTER}
+
+    if config.robot_mode == 2:
+        absent = [label for role, label, _ in _ROLE_ROSTER if role not in active_roles]
+        print(
+            f"\n  2-robot mode: assigning {needed} seat(s). "
+            f"Absent (left as-is in .env): {', '.join(absent) or 'none'}"
+        )
+
+    if len(robots_info) < needed:
+        print(f"\n  Found only {len(robots_info)} robot(s). Need {needed} to assign all active roles.")
         print("  Check the missing robots, then run setup again.")
         return None
 
     print("\n  Waking up robots...")
 
-    for robot in robots_info[:3]:
+    for robot in robots_info[:needed]:
         addresses = robot.get("addresses") or []
         ip = addresses[0] if addresses else robot.get("host")
 
@@ -648,7 +688,7 @@ def _setup_robots() -> Config | None:
     print("\n  Identify each robot.")
     print("  You will wiggle each robot one by one.")
 
-    for i, robot in enumerate(robots_info[:3]):
+    for i, robot in enumerate(robots_info[:needed]):
         addresses = robot.get("addresses") or []
         ip = addresses[0] if addresses else robot.get("host", "unknown")
         name = robot.get("props", {}).get("robot_name", robot.get("name", "unknown"))
@@ -684,52 +724,45 @@ def _setup_robots() -> Config | None:
 
     print("\n  Current detected robots:")
 
-    for i, robot in enumerate(robots_info[:3]):
+    for i, robot in enumerate(robots_info[:needed]):
         addresses = robot.get("addresses") or []
         ip = addresses[0] if addresses else robot.get("host", "unknown")
         name = robot.get("props", {}).get("robot_name", robot.get("name", "unknown"))
 
         print(f"    {i + 1}. {name} at {ip}")
 
-    robot_a_idx = input("\n  Which robot is Bentham-Bot / Left? [1]: ").strip() or "1"
-    robot_b_idx = input("  Which robot is Korsgaard-Bot / Center? [2]: ").strip() or "2"
-    robot_c_idx = input("  Which robot is Aquinas-Bot / Right? [3]: ").strip() or "3"
-
-    try:
-        robot_a_i = int(robot_a_idx) - 1
-        robot_b_i = int(robot_b_idx) - 1
-        robot_c_i = int(robot_c_idx) - 1
-
-        selected = [robot_a_i, robot_b_i, robot_c_i]
-
-        if len(set(selected)) != 3:
-            print("  Each role must use a different robot.")
+    # Ask which discovered robot maps to each active role, in fixed order.
+    selections: dict[str, int] = {}
+    for default_idx, role in enumerate(active_roles):
+        raw = (
+            input(f"\n  Which robot is {active_labels[role]}? [{default_idx + 1}]: ").strip()
+            or str(default_idx + 1)
+        )
+        try:
+            selections[role] = int(raw) - 1
+        except ValueError:
+            print("  Invalid selection.")
             return None
 
-        if not all(0 <= i < len(robots_info) for i in selected):
-            print("  Invalid robot number.")
-            return None
+    chosen = list(selections.values())
 
-    except ValueError:
-        print("  Invalid selection.")
+    if len(set(chosen)) != len(chosen):
+        print("  Each role must use a different robot.")
         return None
 
-    robot_a_info = robots_info[robot_a_i]
-    robot_b_info = robots_info[robot_b_i]
-    robot_c_info = robots_info[robot_c_i]
+    if not all(0 <= i < len(robots_info) for i in chosen):
+        print("  Invalid robot number.")
+        return None
 
-    ip_a = _robot_ip(robot_a_info)
-    ip_b = _robot_ip(robot_b_info)
-    ip_c = _robot_ip(robot_c_info)
-
-    name_a = _robot_name(robot_a_info)
-    name_b = _robot_name(robot_b_info)
-    name_c = _robot_name(robot_c_info)
+    resolved: dict[str, tuple[str, str]] = {}  # role -> (ip, name)
 
     print("\n  Assignment:")
-    print(f"    Bentham-Bot / Left:      {name_a} at {ip_a}")
-    print(f"    Korsgaard-Bot / Center:  {name_b} at {ip_b}")
-    print(f"    Aquinas-Bot / Right:     {name_c} at {ip_c}")
+    for role in active_roles:
+        info = robots_info[selections[role]]
+        ip = _robot_ip(info)
+        name = _robot_name(info)
+        resolved[role] = (ip, name)
+        print(f"    {active_labels[role] + ':':24} {name} at {ip}")
 
     confirm = input("\n  Save this assignment to .env? (y/n) [y]: ").strip().lower()
 
@@ -742,15 +775,14 @@ def _setup_robots() -> Config | None:
     else:
         lines = []
 
-    lines = _set_env(lines, "ROBOT_A_HOST", ip_a)
-    lines = _set_env(lines, "ROBOT_B_HOST", ip_b)
-    lines = _set_env(lines, "ROBOT_C_HOST", ip_c)
-
-    # Keep physical robot names in .env.
-    # The discussion names Bentham-Bot / Korsgaard-Bot / Aquinas-Bot are handled in prompts/player display.
-    lines = _set_env(lines, "ROBOT_A_NAME", f'"{name_a}"')
-    lines = _set_env(lines, "ROBOT_B_NAME", f'"{name_b}"')
-    lines = _set_env(lines, "ROBOT_C_NAME", f'"{name_c}"')
+    # Write only the active roles. The absent seat's ROBOT_*_HOST/NAME are left
+    # untouched so a later switch back to 3-robot mode keeps working.
+    # (Discussion names Bentham-Bot / Korsgaard-Bot / Aquinas-Bot are handled in
+    # prompts/player display, independent of these physical robot names.)
+    for role, (ip, name) in resolved.items():
+        host_key, name_key = _ROLE_ENV[role]
+        lines = _set_env(lines, host_key, ip)
+        lines = _set_env(lines, name_key, f'"{name}"')
 
     env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -761,9 +793,11 @@ def _setup_robots() -> Config | None:
     new_config = Config.from_env()
 
     print("\n  Robot dashboards:")
-    print(f"    Bentham-Bot / Left:      http://{new_config.robot_a.host}:8000")
-    print(f"    Korsgaard-Bot / Center:  http://{new_config.robot_b.host}:8000")
-    print(f"    Aquinas-Bot / Right:     http://{new_config.robot_c.host}:8000")
+    for role, label, attr in _ROLE_ROSTER:
+        if role in active_roles:
+            print(f"    {label + ':':24} http://{getattr(new_config, attr).host}:8000")
+        else:
+            print(f"    {label + ':':24} (absent in 2-robot mode)")
 
     return new_config
 
@@ -850,18 +884,15 @@ def main() -> None:
 
     while True:
         print("\n--- ETHICS PODCAST ---")
-        print(
-            f"  Bentham-Bot / Left:      {config.robot_a.name or '?'} "
-            f"({config.robot_a.host})  voice={config.robot_a.voice}"
-        )
-        print(
-            f"  Korsgaard-Bot / Center:  {config.robot_b.name or '?'} "
-            f"({config.robot_b.host})  voice={config.robot_b.voice}"
-        )
-        print(
-            f"  Aquinas-Bot / Right:     {config.robot_c.name or '?'} "
-            f"({config.robot_c.host})  voice={config.robot_c.voice}"
-        )
+        if config.robot_mode == 2:
+            print(f"  Robot mode: 2 robots (absent seat plays voice on TV only)")
+        for role, label, attr in _ROLE_ROSTER:
+            robot = getattr(config, attr)
+            absent = "  [ABSENT]" if not config.is_role_active(role) else ""
+            print(
+                f"  {label + ':':24} {robot.name or '?'} "
+                f"({robot.host})  voice={robot.voice}{absent}"
+            )
         print(f"  Model: {config.openai_model}")
 
         if wake_proc and wake_proc.poll() is None:
@@ -878,7 +909,7 @@ def main() -> None:
 
         if choice == "0":
             try:
-                new_config = _setup_robots()
+                new_config = _setup_robots(config)
 
                 if new_config:
                     config = new_config
