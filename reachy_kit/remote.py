@@ -341,7 +341,16 @@ class TunnelReachyMini(ReachyMini):
         kwargs["media_backend"] = "no_media"  # skip WebRTC, it cannot pass the VPN
         super().__init__(host=host, **kwargs)
         # The SDK has just received a status; waiting for the next one costs up to 1 s.
-        specs_name = getattr(self.client.get_status(wait=False), "camera_specs_name", "") or "wireless"
+        status = self.client.get_status(wait=False)
+        if getattr(status, "media_released", False):
+            # Left released by someone else (e.g. a plain SDK client with "no_media"):
+            # the robot-camera stream needs the daemon's camera socket, and retries
+            # every 2 s, so it comes back once the daemon holds the camera again.
+            if self.client.acquire_media():
+                logger.info("The robot camera was released; asked the robot to take it back")
+            else:
+                logger.warning("The robot camera is released and could not be taken back")
+        specs_name = getattr(status, "camera_specs_name", "") or "wireless"
         media = TunnelMedia(host)
         media.camera = TunnelCamera(specs_name, media, camera_size)
         self.media_manager = media
