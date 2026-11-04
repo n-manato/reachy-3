@@ -136,6 +136,7 @@ The VPN is slow (about 0.2–0.3 s each way), so:
 | `Task did not complete in time` / `Lost connection with the server` | The VPN is too slow or your app sends too many commands; see the rules of thumb above. |
 | No start-up sound | Check `volume` in `robot_config.json` (100 = loudest). |
 | Video is slow or choppy | Lower `webcam` `fps` (or resolution) in `robot_config.json`. |
+| Video stalls or freezes (slow VPN / Wi-Fi) | Set `"robot_camera": false` in `robot_config.json`: only the webcam is streamed, which halves the video traffic. `reachy_mini.media.get_frame()` then returns `None`. |
 
 ## Files
 

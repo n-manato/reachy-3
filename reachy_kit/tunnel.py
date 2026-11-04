@@ -71,14 +71,19 @@ def start_on_robot(client: paramiko.SSHClient, tag: str, command: str, match: st
     threading.Thread(target=relay, daemon=True).start()
 
 
-def start_robot_services(client: paramiko.SSHClient, webcam_args: str = "") -> None:
-    """Upload the robot/ scripts and start the camera streams and the audio bridge."""
+def start_robot_services(client: paramiko.SSHClient, webcam_args: str = "", robot_camera: bool = True) -> None:
+    """Upload the robot/ scripts and start the camera streams and the audio bridge.
+
+    robot_camera=False leaves out the robot's own camera stream (the USB webcam
+    stays): it saves VPN bandwidth when the connection is the bottleneck.
+    """
     sftp = client.open_sftp()
     for name in ROBOT_SCRIPTS:
         with open(os.path.join(HERE, "robot", name), "rb") as f:
             sftp.putfo(f, f"{REMOTE_DIR}/{name}")
     sftp.close()
-    for source, port in (("webcam", WEBCAM_PORT), ("robot", ROBOT_CAMERA_PORT)):
+    sources = [("webcam", WEBCAM_PORT)] + ([("robot", ROBOT_CAMERA_PORT)] if robot_camera else [])
+    for source, port in sources:
         start_on_robot(client, f"[{source} stream]",
                        f"webcam_stream.py --port {port} --source {source} {webcam_args}".strip(),
                        match=f"webcam_stream.py --port {port} ")
@@ -150,7 +155,7 @@ def _ssh(robot_ip: str, user: str, password: str) -> paramiko.SSHClient:
 
 
 def open_tunnel(robot_ip: str, password: str, local_addr: str = "127.0.0.1",
-                 user: str = "pollen", webcam_args: str = "") -> tuple[list, list]:
+                 user: str = "pollen", webcam_args: str = "", robot_camera: bool = True) -> tuple[list, list]:
     """SSH to the robot, start the robot-side services and forward PORTS to local_addr.
 
     Control (daemon API) and media (camera/audio streams) use separate SSH
@@ -158,12 +163,13 @@ def open_tunnel(robot_ip: str, password: str, local_addr: str = "127.0.0.1",
     motion commands by seconds, and the SDK then times out.
 
     webcam_args is passed to both robot/webcam_stream.py instances (webcam and
-    robot camera), e.g. "--width 640 --height 360 --fps 8".
+    robot camera), e.g. "--width 640 --height 360 --fps 8". robot_camera=False
+    does not start the robot-camera stream.
     Returns (ssh clients, local servers) for close_tunnel().
     """
     control = _ssh(robot_ip, user, password)
     media = _ssh(robot_ip, user, password)
-    start_robot_services(media, webcam_args)
+    start_robot_services(media, webcam_args, robot_camera)
 
     listen = [(ThreadedServer, local_addr)]
     if local_addr == "127.0.0.1":

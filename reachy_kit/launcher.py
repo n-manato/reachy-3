@@ -60,8 +60,7 @@ button{{font-size:14px;padding:6px 16px}}
 <header><div><b>{name}</b> ({ip})</div><div>App: <b id="app">-</b> <span id="state"></span></div>
 <div><button id="listen">Listen to robot mic</button> <button id="quit">Quit (robot goes to sleep)</button></div></header>
 <main>
-<section><h2>Robot camera</h2><div class="view" id="robot"><span class="nc">Not connected</span></div></section>
-<section><h2>Webcam</h2><div class="view" id="webcam"><span class="nc">Not connected</span></div></section>
+{robot_section}<section><h2>Webcam</h2><div class="view" id="webcam"><span class="nc">Not connected</span></div></section>
 </main>
 <script>
 const urls = {urls};
@@ -148,6 +147,8 @@ def load_config() -> dict:
     if min(webcam.values()) <= 0:
         fail('robot_config.json: "webcam" width/height/fps must be greater than 0')
     cfg["webcam"] = webcam
+    if not isinstance(cfg.setdefault("robot_camera", True), bool):
+        fail('robot_config.json: "robot_camera" must be true or false')
     return cfg
 
 
@@ -260,16 +261,20 @@ def run_app(app, mini, state: dict) -> None:
 
 
 def make_viewer(cfg: dict, stop: threading.Event, status: dict) -> http.server.ThreadingHTTPServer:
-    status.update({name: False for name in STREAMS})
+    streams = {n: u for n, u in STREAMS.items() if n != "robot" or cfg["robot_camera"]}
+    status.update({name: False for name in streams})
 
     def watch_streams() -> None:
         while not stop.is_set():
-            for name, url in STREAMS.items():
+            for name, url in streams.items():
                 status[name] = stream_available(url)
             stop.wait(5)
 
     threading.Thread(target=watch_streams, daemon=True).start()
-    page = PAGE.format(name=cfg["name"], ip=cfg["ip"], urls=json.dumps(STREAMS), mic_url=MIC_URL).encode()
+    robot_section = ('<section><h2>Robot camera</h2><div class="view" id="robot">'
+                     '<span class="nc">Not connected</span></div></section>\n') if cfg["robot_camera"] else ""
+    page = PAGE.format(name=cfg["name"], ip=cfg["ip"], urls=json.dumps(streams), mic_url=MIC_URL,
+                       robot_section=robot_section).encode()
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *args) -> None:
@@ -327,7 +332,8 @@ def main() -> None:
     w = cfg["webcam"]
     try:
         clients, servers = open_tunnel(cfg["ip"], cfg["ssh_password"], LOCAL, cfg["ssh_user"],
-                                       f"--width {w['width']} --height {w['height']} --fps {w['fps']}")
+                                       f"--width {w['width']} --height {w['height']} --fps {w['fps']}",
+                                       cfg["robot_camera"])
     except OSError as e:
         if getattr(e, "winerror", None) == 10048 or "address already in use" in str(e).lower():
             fail("Port 8000/8443/8090-8093 is already in use. Is another run.bat or tunnel running?")
