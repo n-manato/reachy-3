@@ -15,7 +15,7 @@ camera/audio (UDP, and signalled to the robot's lab Wi-Fi address) does not get 
 | 8443 | control | WebRTC signaling (only useful on the lab Wi-Fi) |
 | 8090 | media | webcam MJPEG stream (`reachy_kit/robot/webcam_stream.py --source webcam`) |
 | 8091 | media | robot camera MJPEG stream from the daemon's IPC socket (`--source robot`) |
-| 8092 | media | robot microphone, raw PCM 16 kHz stereo over HTTP (`reachy_kit/robot/audio_bridge.py`) |
+| 8092 | media | robot microphone `/mic` and webcam microphone `/webcam_mic`, raw PCM 16 kHz stereo over HTTP (`reachy_kit/robot/audio_bridge.py`) |
 | 8093 | media | robot speaker, raw PCM 16 kHz stereo over TCP (`audio_bridge.py`) |
 
 Control and media are separate because video queued in a shared SSH connection delayed motion

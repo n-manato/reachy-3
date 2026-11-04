@@ -46,6 +46,7 @@ STREAMS = {  # panel id -> MJPEG server on the robot, reached through the tunnel
     "webcam": f"http://{LOCAL}:{WEBCAM_PORT}",
 }
 MIC_URL = f"http://{LOCAL}:{MIC_PORT}/mic"  # raw PCM s16le, 16 kHz, 2 ch
+WEBCAM_MIC_URL = f"http://{LOCAL}:{MIC_PORT}/webcam_mic"  # same format; hears the robot's speaker
 
 PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>{name}</title>
 <style>
@@ -58,7 +59,8 @@ section{{flex:1 1 480px;min-width:0}} h2{{font-size:15px;margin:6px 0}}
 button{{font-size:14px;padding:6px 16px}}
 </style></head><body>
 <header><div><b>{name}</b> ({ip})</div><div>App: <b id="app">-</b> <span id="state"></span></div>
-<div><button id="listen">Listen to robot mic</button> <button id="quit">Quit (robot goes to sleep)</button></div></header>
+<div><button id="listen">Listen to robot mic</button> <button id="listen-webcam">Listen to webcam mic</button>
+<button id="quit">Quit (robot goes to sleep)</button></div></header>
 <main>
 {robot_section}<section><h2>Webcam</h2><div class="view" id="webcam"><span class="nc">Not connected</span></div></section>
 </main>
@@ -77,38 +79,52 @@ async function poll() {{
 }}
 poll(); setInterval(poll, 5000);
 
-// Robot microphone: raw PCM (s16le, 16 kHz, stereo) through the tunnel, played with Web Audio.
-let mic = null;
-document.getElementById('listen').onclick = async (ev) => {{
-  const btn = ev.target;
-  if (mic) {{ mic.abort.abort(); mic.ctx.close(); mic = null; btn.textContent = 'Listen to robot mic'; return; }}
-  const ctx = new AudioContext({{sampleRate: 16000}});
-  const abort = new AbortController();
-  mic = {{ctx, abort}};
-  btn.textContent = 'Stop listening';
+// Microphones: raw PCM (s16le, 16 kHz, stereo) through the tunnel, played with Web Audio.
+// The robot's own mic barely hears the robot's speaker; the webcam mic does.
+function listenButton(id, url, label) {{
+  const btn = document.getElementById(id);
+  let mic = null;
+  const stop = (text) => {{
+    if (mic) {{ mic.abort.abort(); mic.ctx.close(); mic = null; }}
+    btn.textContent = text || label;
+  }};
+  btn.onclick = async () => {{
+    if (mic) {{ stop(); return; }}
+    const ctx = new AudioContext({{sampleRate: 16000}});
+    const abort = new AbortController();
+    const me = mic = {{ctx, abort}};
+    btn.textContent = 'Stop listening';
+    try {{
+      const r = await fetch(url, {{signal: abort.signal}});
+      if (!r.ok) throw new Error(r.status === 404 ? 'no microphone' : 'busy, try again');
+      await play(r.body.getReader(), ctx);
+      if (mic === me) stop();
+    }} catch (e) {{ if (mic === me) stop(e.name === 'AbortError' ? '' : label + ' (' + e.message + ')'); }}
+  }};
+}}
+async function play(reader, ctx) {{
   let next = 0, rest = new Uint8Array(0);
-  try {{
-    const reader = (await fetch('{mic_url}', {{signal: abort.signal}})).body.getReader();
-    for (;;) {{
-      const {{value, done}} = await reader.read();
-      if (done) break;
-      const buf = new Uint8Array(rest.length + value.length);
-      buf.set(rest); buf.set(value, rest.length);
-      const usable = buf.length - buf.length % 4;
-      rest = buf.slice(usable);
-      const pcm = new Int16Array(buf.buffer, 0, usable / 2);
-      const n = pcm.length / 2;
-      if (!n) continue;
-      const ab = ctx.createBuffer(1, n, 16000), ch = ab.getChannelData(0);
-      for (let i = 0; i < n; i++) ch[i] = (pcm[2 * i] + pcm[2 * i + 1]) / 65536;
-      const src = ctx.createBufferSource();
-      src.buffer = ab; src.connect(ctx.destination);
-      const now = ctx.currentTime;
-      if (next < now || next > now + 0.5) next = now + 0.1;  // resync, keep latency low
-      src.start(next); next += ab.duration;
-    }}
-  }} catch (e) {{ if (mic) btn.textContent = 'Listen to robot mic'; mic = null; }}
-}};
+  for (;;) {{
+    const {{value, done}} = await reader.read();
+    if (done) break;
+    const buf = new Uint8Array(rest.length + value.length);
+    buf.set(rest); buf.set(value, rest.length);
+    const usable = buf.length - buf.length % 4;
+    rest = buf.slice(usable);
+    const pcm = new Int16Array(buf.buffer, 0, usable / 2);
+    const n = pcm.length / 2;
+    if (!n) continue;
+    const ab = ctx.createBuffer(1, n, 16000), ch = ab.getChannelData(0);
+    for (let i = 0; i < n; i++) ch[i] = (pcm[2 * i] + pcm[2 * i + 1]) / 65536;
+    const src = ctx.createBufferSource();
+    src.buffer = ab; src.connect(ctx.destination);
+    const now = ctx.currentTime;
+    if (next < now || next > now + 0.5) next = now + 0.1;  // resync, keep latency low
+    src.start(next); next += ab.duration;
+  }}
+}}
+listenButton('listen', '{mic_url}', 'Listen to robot mic');
+listenButton('listen-webcam', '{webcam_mic_url}', 'Listen to webcam mic');
 
 document.getElementById('quit').onclick = async () => {{
   await fetch('/quit', {{method: 'POST'}}).catch(() => {{}});
@@ -273,7 +289,7 @@ def make_viewer(cfg: dict, stop: threading.Event, status: dict) -> http.server.T
     threading.Thread(target=watch_streams, daemon=True).start()
     robot_section = ('<section><h2>Robot camera</h2><div class="view" id="robot">'
                      '<span class="nc">Not connected</span></div></section>\n') if cfg["robot_camera"] else ""
-    page = PAGE.format(name=cfg["name"], ip=cfg["ip"], urls=json.dumps(streams), mic_url=MIC_URL,
+    page = PAGE.format(name=cfg["name"], ip=cfg["ip"], urls=json.dumps(streams), mic_url=MIC_URL, webcam_mic_url=WEBCAM_MIC_URL,
                        robot_section=robot_section).encode()
 
     class Handler(http.server.BaseHTTPRequestHandler):

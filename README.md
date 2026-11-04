@@ -59,6 +59,8 @@ password (ask your instructor). They are saved in `robot_config.json`, which is 
    - **Webcam** – a camera watching the robot, so you can see what your app does
      (shows "Not connected" if that robot has no webcam)
    - **Listen to robot mic** – hear the room through the robot's microphone
+   - **Listen to webcam mic** – hear the room through the webcam's microphone. Use this to check
+     the robot's speaker: the robot's own microphone barely picks up sounds the robot plays.
    - **App** – `running`, `finished` or `error (see the console)`
 4. Press **Quit** on the page (or Ctrl+C in the console) when you are done.
 5. Disconnect GlobalProtect when you no longer need it (while connected, all your internet traffic
@@ -135,6 +137,8 @@ The VPN is slow (about 0.2–0.3 s each way), so:
 | App shows `error (see the console)` | Your app raised an exception; the console shows where. |
 | `Task did not complete in time` / `Lost connection with the server` | The VPN is too slow or your app sends too many commands; see the rules of thumb above. |
 | No start-up sound | Check `volume` in `robot_config.json` (100 = loudest). |
+| Silence from the robot's speaker when listening with **Listen to robot mic** | Expected: the robot's microphone does not pick up its own speaker. Listen with **Listen to webcam mic** instead. |
+| **Listen to webcam mic** shows `(no microphone)` / `(busy, try again)` | That robot has no webcam, or someone else is listening to its webcam mic (only one listener at a time). |
 | Video is slow or choppy | Lower `webcam` `fps` (or resolution) in `robot_config.json`. |
 | Video stalls or freezes (slow VPN / Wi-Fi) | Set `"robot_camera": false` in `robot_config.json`: only the webcam is streamed, which halves the video traffic. `reachy_mini.media.get_frame()` then returns `None`. |
 
