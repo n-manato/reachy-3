@@ -96,7 +96,7 @@ function listenButton(id, url, label) {{
     btn.textContent = 'Stop listening';
     try {{
       const r = await fetch(url, {{signal: abort.signal}});
-      if (!r.ok) throw new Error(r.status === 404 ? 'no microphone' : 'busy, try again');
+      if (!r.ok) throw new Error(r.status === 404 ? 'no microphone' : 'unavailable, try again');
       await play(r.body.getReader(), ctx);
       if (mic === me) stop();
     }} catch (e) {{ if (mic === me) stop(e.name === 'AbortError' ? '' : label + ' (' + e.message + ')'); }}

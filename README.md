@@ -102,6 +102,7 @@ The robot is already awake when `run()` starts, and it is put back to sleep afte
 | Look at a point in the camera image | `reachy_mini.look_at_image(u, v, duration=1.0)` (pixels in the 640x360 frame) |
 | Play a built-in sound | `reachy_mini.media.play_sound("dance1.wav")` (`wake_up`, `go_sleep`, `dance1`, `confused1`, `impatient1`, `count`) |
 | Robot microphone | `reachy_mini.media.start_recording()`, then `chunk = reachy_mini.media.get_audio_sample()` (float32 `(n, 2)` at 16 kHz, or `None`) |
+| Webcam microphone (this kit only, not in the SDK) | `reachy_mini.media.start_webcam_recording()`, then `chunk = reachy_mini.media.get_webcam_audio_sample()` (same format), `stop_webcam_recording()`. Hears the robot's speaker, which the robot's own microphone does not. Can be used together with the robot microphone and the check page. |
 | Robot speaker (your own audio) | `reachy_mini.media.start_playing()`, `reachy_mini.media.push_audio_sample(samples)` (float32 at 16 kHz), `stop_playing()` |
 
 `examples/all_features_app.py` uses every one of them – read it and run it with
@@ -138,7 +139,7 @@ The VPN is slow (about 0.2–0.3 s each way), so:
 | `Task did not complete in time` / `Lost connection with the server` | The VPN is too slow or your app sends too many commands; see the rules of thumb above. |
 | No start-up sound | Check `volume` in `robot_config.json` (100 = loudest). |
 | Silence from the robot's speaker when listening with **Listen to robot mic** | Expected: the robot's microphone does not pick up its own speaker. Listen with **Listen to webcam mic** instead. |
-| **Listen to webcam mic** shows `(no microphone)` / `(busy, try again)` | That robot has no webcam, or someone else is listening to its webcam mic (only one listener at a time). |
+| **Listen to webcam mic** shows `(no microphone)` / `(unavailable, try again)` | `no microphone`: that robot has no webcam. `unavailable`: the webcam's microphone could not be opened (e.g. it was just replugged); press the button again. |
 | Video is slow or choppy | Lower `webcam` `fps` (or resolution) in `robot_config.json`. |
 | Video stalls or freezes (slow VPN / Wi-Fi) | Set `"robot_camera": false` in `robot_config.json`: only the webcam is streamed, which halves the video traffic. `reachy_mini.media.get_frame()` then returns `None`. |
 

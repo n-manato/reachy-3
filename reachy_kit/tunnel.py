@@ -22,6 +22,7 @@ because the SDK's WebRTC camera/audio (UDP) does not get through the VPN.
 """
 
 import getpass
+import hashlib
 import json
 import logging
 import os
@@ -40,7 +41,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROBOTS_PATH = os.path.join(os.path.dirname(HERE), "admin", "robots.json")
 WEBCAM_PORT = 8090        # USB webcam watching the robot (MJPEG)
 ROBOT_CAMERA_PORT = 8091  # robot's own camera (MJPEG)
-MIC_PORT = 8092           # robot microphone (raw PCM over HTTP)
+MIC_PORT = 8092           # robot and webcam microphones (raw PCM over HTTP)
 SPEAKER_PORT = 8093       # robot speaker (raw PCM over TCP)
 # 8000 daemon API, 8443 WebRTC signaling (WebRTC media itself does not pass the VPN)
 PORTS = [8000, 8443, WEBCAM_PORT, ROBOT_CAMERA_PORT, MIC_PORT, SPEAKER_PORT]
@@ -71,6 +72,28 @@ def start_on_robot(client: paramiko.SSHClient, tag: str, command: str, match: st
     threading.Thread(target=relay, daemon=True).start()
 
 
+def replace_old_audio_bridge(client: paramiko.SSHClient) -> None:
+    """Stop a running audio bridge from another version of the kit, so start_on_robot starts this one.
+
+    A bridge started by someone else's older kit would otherwise be reused and
+    lack newer endpoints (e.g. /webcam_mic). The bridge reports a hash of its
+    own script; the robot only runs one, so it is restarted when that differs.
+    """
+    with open(os.path.join(HERE, "robot", "audio_bridge.py"), "rb") as f:
+        version = hashlib.sha256(f.read()).hexdigest()[:12]
+    _, out, _ = client.exec_command(
+        f"pgrep -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py' >/dev/null"
+        f" && curl -s -m 3 http://127.0.0.1:{MIC_PORT}/version")
+    running = out.read().decode(errors="replace").strip()
+    if out.channel.recv_exit_status() != 0 or running == version:
+        return  # none running, or the same version
+    print("[audio] replacing an audio bridge from another kit version", flush=True)
+    _, out, _ = client.exec_command(
+        f"pkill -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py';"
+        f" for i in $(seq 20); do pgrep -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py' >/dev/null || break; sleep 0.1; done")
+    out.channel.recv_exit_status()
+
+
 def start_robot_services(client: paramiko.SSHClient, webcam_args: str = "", robot_camera: bool = True) -> None:
     """Upload the robot/ scripts and start the camera streams and the audio bridge.
 
@@ -82,6 +105,7 @@ def start_robot_services(client: paramiko.SSHClient, webcam_args: str = "", robo
         with open(os.path.join(HERE, "robot", name), "rb") as f:
             sftp.putfo(f, f"{REMOTE_DIR}/{name}")
     sftp.close()
+    replace_old_audio_bridge(client)
     sources = [("webcam", WEBCAM_PORT)] + ([("robot", ROBOT_CAMERA_PORT)] if robot_camera else [])
     for source, port in sources:
         start_on_robot(client, f"[{source} stream]",

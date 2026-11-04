@@ -7,6 +7,7 @@ replaced by TunnelMedia, which offers the same calls over the tunnel:
 
     camera      get_frame(), get_frame_jpeg()          <- MJPEG stream, port 8091
     microphone  start_recording(), get_audio_sample()  <- raw PCM, port 8092
+    webcam mic  start_webcam_recording(), get_webcam_audio_sample()  <- same (kit only, not in the SDK)
     speaker     start_playing(), push_audio_sample()   -> raw PCM, port 8093
     sounds      play_sound("wake_up.wav"), stop_sound() -> daemon HTTP API
 
@@ -106,6 +107,123 @@ class TunnelCamera:
         return intrinsics_for_size(self.camera_specs.K, crop_scale, self.resolution)
 
 
+class MicStream:
+    """One raw-PCM microphone stream from the audio bridge (S16LE, 16 kHz, 2 ch).
+
+    A reader thread fills a queue; get() never blocks. While recording, a
+    stream that dropped (robot-side error, webcam replugged) is reopened in
+    the background at most once a second.
+    """
+
+    def __init__(self, url: str, name: str) -> None:
+        self.url = url
+        self.name = name
+        self._lock = threading.Lock()
+        self._recording = False
+        self._resp = None
+        self._thread: Optional[threading.Thread] = None
+        self._queue: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=250)  # ~5 s
+        self._retry_at = 0.0
+        self._reconnecting = False
+        self._warned = False  # report a failing stream once, not on every retry
+
+    def start(self, raise_errors: bool = True) -> None:
+        with self._lock:
+            self._recording = True
+            self._retry_at = time.monotonic() + 1.0
+            try:
+                self._start_reader()
+            except OSError as e:
+                if raise_errors:
+                    raise
+                self._warn(e)
+
+    def _warn(self, e: OSError) -> None:
+        if not self._warned:
+            self._warned = True
+            reason = "this robot has none" if getattr(e, "code", None) == 404 else e
+            logger.warning("%s not available (%s); retrying in the background", self.name, reason)
+
+    def _start_reader(self) -> None:
+        """(Re)start the reader thread if it is not running. Call with _lock held."""
+        if self._thread is not None and self._thread.is_alive():
+            return
+        if self._resp is not None:
+            self._resp.close()
+        resp = urllib.request.urlopen(self.url, timeout=10)
+        self._resp = resp
+        self._warned = False
+        # The thread gets its own response and queue, so an old thread that is
+        # still finishing can never write into a newer recording.
+        self._thread = threading.Thread(target=self._read, args=(resp, self._queue), daemon=True)
+        self._thread.start()
+
+    @staticmethod
+    def _read(resp, out: "queue.Queue[np.ndarray]") -> None:
+        frame_bytes = 2 * CHANNELS
+        rest = b""
+        try:
+            while True:
+                data = resp.read1(8192)
+                if not data:
+                    break
+                data = rest + data
+                usable = len(data) - len(data) % frame_bytes
+                rest = data[usable:]
+                pcm = np.frombuffer(data[:usable], "<i2").reshape(-1, CHANNELS)
+                chunk = pcm.astype(np.float32) / 32768.0
+                if out.full():
+                    try:
+                        out.get_nowait()  # drop the oldest, like a live source
+                    except queue.Empty:
+                        pass
+                out.put_nowait(chunk)
+        except (OSError, ValueError):
+            pass
+
+    def get(self) -> Optional[np.ndarray]:
+        """Next chunk, float32 of shape (n, 2), or None if nothing new."""
+        try:
+            return self._queue.get_nowait()
+        except queue.Empty:
+            pass
+        # Reader died (stream stalled, robot-side error): reconnect in the background,
+        # at most once a second. Never wait for the lock: a reconnect in progress
+        # holds it while it talks to the robot, and this poll must not block the app.
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            dead = self._thread is None or not self._thread.is_alive()
+            due = time.monotonic() >= self._retry_at
+            if self._recording and dead and due and not self._reconnecting:
+                self._retry_at = time.monotonic() + 1.0
+                self._reconnecting = True
+                threading.Thread(target=self._reconnect, daemon=True).start()
+        finally:
+            self._lock.release()
+        return None
+
+    def _reconnect(self) -> None:
+        try:
+            with self._lock:
+                if self._recording:
+                    self._start_reader()
+        except OSError as e:
+            self._warn(e)
+        finally:
+            self._reconnecting = False
+
+    def stop(self) -> None:
+        with self._lock:
+            self._recording = False
+            if self._resp is not None:
+                self._resp.close()
+            if self._thread is not None:
+                self._thread.join(timeout=2)
+            self._resp = self._thread = None
+            self._queue = queue.Queue(maxsize=250)
+
+
 class TunnelMedia:
     """Drop-in for the SDK's MediaManager, carried over the SSH tunnel."""
 
@@ -121,14 +239,9 @@ class TunnelMedia:
         self._cam_time = 0.0
         self._cam_thread: Optional[threading.Thread] = None
         self._cam_stop = threading.Event()
-        # microphone
-        self._mic_lock = threading.Lock()
-        self._mic_recording = False
-        self._mic_resp = None
-        self._mic_thread: Optional[threading.Thread] = None
-        self._mic_queue: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=250)  # ~5 s
-        self._mic_retry_at = 0.0
-        self._mic_reconnecting = False
+        # microphones
+        self._mic = MicStream(f"http://{host}:{MIC_PORT}/mic", "robot microphone")
+        self._webcam_mic = MicStream(f"http://{host}:{MIC_PORT}/webcam_mic", "webcam microphone")
         # speaker
         self._speaker: Optional[socket.socket] = None
 
@@ -204,87 +317,29 @@ class TunnelMedia:
         return CHANNELS
 
     def start_recording(self) -> None:
-        with self._mic_lock:
-            self._mic_recording = True
-            self._start_mic_reader()
-
-    def _start_mic_reader(self) -> None:
-        """(Re)start the reader thread if it is not running. Call with _mic_lock held."""
-        if self._mic_thread is not None and self._mic_thread.is_alive():
-            return
-        if self._mic_resp is not None:
-            self._mic_resp.close()
-        resp = urllib.request.urlopen(f"http://{self.host}:{MIC_PORT}/mic", timeout=10)
-        self._mic_resp = resp
-        # The thread gets its own response and queue, so an old thread that is
-        # still finishing can never write into a newer recording.
-        self._mic_thread = threading.Thread(target=self._read_mic, args=(resp, self._mic_queue), daemon=True)
-        self._mic_thread.start()
-
-    @staticmethod
-    def _read_mic(resp, out: "queue.Queue[np.ndarray]") -> None:
-        frame_bytes = 2 * CHANNELS
-        rest = b""
-        try:
-            while True:
-                data = resp.read1(8192)
-                if not data:
-                    break
-                data = rest + data
-                usable = len(data) - len(data) % frame_bytes
-                rest = data[usable:]
-                pcm = np.frombuffer(data[:usable], "<i2").reshape(-1, CHANNELS)
-                chunk = pcm.astype(np.float32) / 32768.0
-                if out.full():
-                    try:
-                        out.get_nowait()  # drop the oldest, like a live source
-                    except queue.Empty:
-                        pass
-                out.put_nowait(chunk)
-        except (OSError, ValueError):
-            pass
+        self._mic.start()
 
     def get_audio_sample(self) -> Optional[np.ndarray]:
-        """Next microphone chunk, float32 of shape (n, 2), or None if nothing new."""
-        try:
-            return self._mic_queue.get_nowait()
-        except queue.Empty:
-            pass
-        # Reader died (stream stalled, robot-side error): reconnect in the background,
-        # at most once a second. Never wait for the lock: a reconnect in progress
-        # holds it while it talks to the robot, and this poll must not block the app.
-        if not self._mic_lock.acquire(blocking=False):
-            return None
-        try:
-            dead = self._mic_thread is None or not self._mic_thread.is_alive()
-            due = time.monotonic() >= self._mic_retry_at
-            if self._mic_recording and dead and due and not self._mic_reconnecting:
-                self._mic_retry_at = time.monotonic() + 1.0
-                self._mic_reconnecting = True
-                threading.Thread(target=self._reconnect_mic, daemon=True).start()
-        finally:
-            self._mic_lock.release()
-        return None
-
-    def _reconnect_mic(self) -> None:
-        try:
-            with self._mic_lock:
-                if self._mic_recording:
-                    self._start_mic_reader()
-        except OSError as e:
-            logger.warning("microphone reconnect failed: %s", e)
-        finally:
-            self._mic_reconnecting = False
+        """Next robot-microphone chunk, float32 of shape (n, 2), or None if nothing new."""
+        return self._mic.get()
 
     def stop_recording(self) -> None:
-        with self._mic_lock:
-            self._mic_recording = False
-            if self._mic_resp is not None:
-                self._mic_resp.close()
-            if self._mic_thread is not None:
-                self._mic_thread.join(timeout=2)
-            self._mic_resp = self._mic_thread = None
-            self._mic_queue = queue.Queue(maxsize=250)
+        self._mic.stop()
+
+    # ---- webcam microphone (not in the SDK) ---------------------------
+    # The robot's own microphone barely picks up the robot's speaker; the
+    # webcam's does. Same format as the robot microphone, and several users
+    # (apps, the check page) can listen at once.
+    def start_webcam_recording(self) -> None:
+        """Start reading the webcam microphone. Without one, warn once and keep retrying."""
+        self._webcam_mic.start(raise_errors=False)
+
+    def get_webcam_audio_sample(self) -> Optional[np.ndarray]:
+        """Next webcam-microphone chunk, float32 of shape (n, 2), or None if nothing new."""
+        return self._webcam_mic.get()
+
+    def stop_webcam_recording(self) -> None:
+        self._webcam_mic.stop()
 
     # ---- speaker ------------------------------------------------------
     def get_output_audio_samplerate(self) -> int:
@@ -328,6 +383,7 @@ class TunnelMedia:
     def close(self) -> None:
         self._cam_stop.set()
         self.stop_recording()
+        self.stop_webcam_recording()
         self.stop_playing()
 
 
