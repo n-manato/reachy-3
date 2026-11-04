@@ -64,10 +64,11 @@ def pipeline(source: str, device: str, width: int, height: int) -> list:
 def capture_loop(cmd: list, fps: float) -> None:
     """Read JPEG frames from GStreamer (multipartmux) and keep the latest one."""
     global latest_frame, frame_id
+    period = 1.0 / fps
     while True:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         out = proc.stdout
-        last = 0.0
+        due = 0.0  # when the next frame may be published
         try:
             while True:
                 line = out.readline()
@@ -79,12 +80,15 @@ def capture_loop(cmd: list, fps: float) -> None:
                 while out.readline() not in (b"\r\n", b"\n", b""):
                     pass
                 jpg = out.read(length)
-                # Publish at most `fps` frames per second: over the VPN the
-                # streams must leave room for the robot's control traffic.
+                # Publish `fps` frames per second on average: over the VPN the
+                # streams must leave room for the robot's control traffic. The
+                # schedule advances by one period, not "since the last frame":
+                # with a 10 fps source and fps=8 the latter publishes every
+                # other frame (5 fps).
                 now = time.monotonic()
-                if now - last < 1.0 / fps:
+                if now < due:
                     continue
-                last = now
+                due = due + period if due > now - period else now + period
                 with frame_cond:
                     latest_frame = jpg
                     frame_id += 1
