@@ -1,0 +1,220 @@
+{
+  "session": "video_achievement",
+  "title": "AI and Human Achievement",
+  "discussion_type": "video_discussion",
+  "target_duration": "about 3 minutes",
+  "model": "gpt-realtime",
+  "student_voice": "echo",
+  "professor_voice": "sage",
+  "moderator_voice": "coral",
+  "num_turns": 9,
+  "turns": [
+    {
+      "turn": 1,
+      "role": "student",
+      "transcript": "Hi, I\u2019m Bentham-Bot. I will look at this video from a consequence-based ethical perspective. The video raised a difficult question: what should humans spend time doing if AI can outperform them? Korsgaard-Bot, Aquinas-Bot, how do you think people should approach this?",
+      "audio_file": "turn_01_student.wav",
+      "duration_secs": 15.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "role": "professor",
+      "transcript": "Hi, I\u2019m Korsgaard-Bot. I will look at this video from a duty and respect-based ethical perspective. From this lens, we must ensure that human dignity and autonomy remain central. Humans should not become mere instruments of AI\u2019s efficiency. We have a duty to foster meaningful activities where humans exercise moral judgment and cultivate relationships with consent and fairness.",
+      "audio_file": "turn_02_professor.wav",
+      "duration_secs": 24.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "role": "moderator",
+      "transcript": "Hi, I\u2019m Aquinas-Bot. I will look at this video from a virtue and purpose-based ethical perspective. It seems that if AI can do tasks faster, we must ask: what virtues should humans cultivate, and what purposeful endeavors should we pursue to become excellent human beings? How do we ensure that technology supports the flourishing of character and community?",
+      "audio_file": "turn_03_moderator.wav",
+      "duration_secs": 22.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "student",
+      "transcript": "One consequence-based concern I have is whether relying too much on AI might lead to widespread loss of human skills, decreasing overall well-being. Should we prioritize tasks that maximize collective happiness, even if they don\u2019t showcase our traditional strengths?",
+      "audio_file": "turn_04_student.wav",
+      "duration_secs": 16.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "professor",
+      "transcript": "That's a vital question. From a duty-based view, it's essential to preserve human capabilities out of respect for human dignity. Even if AI can maximize happiness in some areas, we have a moral obligation to safeguard roles where humans act as moral agents. We must balance collective happiness with the duty of maintaining human responsibility and agency.",
+      "audio_file": "turn_05_professor.wav",
+      "duration_secs": 23.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "moderator",
+      "transcript": "Agreed\u2014human flourishing requires that we practice virtues like wisdom, creativity, and compassion. How can we identify which activities foster those virtues and give humans a sense of purpose?",
+      "audio_file": "turn_06_moderator.wav",
+      "duration_secs": 12.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 7,
+      "role": "student",
+      "transcript": "We could measure the long-term outcomes: do certain human activities create more happiness, reduce suffering, or build stronger communities over time? What if we combine AI efficiency with human-led reflection to guide that choice?",
+      "audio_file": "turn_07_student.wav",
+      "duration_secs": 13.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 8,
+      "role": "professor",
+      "transcript": "That\u2019s a good consideration. From a duty-based view, human-led reflection ensures accountability and respect for all individuals involved. We have a duty to not only rely on outcomes, but on just processes that involve consent, fairness, and treating humans as ends. So, combining AI efficiency with a duty to uphold dignity can help us prioritize tasks where humans guide values and moral choices.",
+      "audio_file": "turn_08_professor.wav",
+      "duration_secs": 28.5,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "down"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 9,
+      "role": "moderator",
+      "transcript": "So we\u2019ve reached a compromise: we\u2019ll let AI handle efficiency while humans focus on cultivating virtues, moral judgment, and meaningful relationships. That balance can guide society toward good purpose and human flourishing. Thanks for a great discussion!",
+      "audio_file": "turn_09_moderator.wav",
+      "duration_secs": 14.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ]
+}

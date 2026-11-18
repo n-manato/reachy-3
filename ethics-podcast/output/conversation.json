@@ -1,0 +1,146 @@
+{
+  "model": "gpt-4o-realtime-preview",
+  "student_voice": "echo",
+  "professor_voice": "sage",
+  "num_turns": 6,
+  "turns": [
+    {
+      "turn": 1,
+      "role": "student",
+      "transcript": "Hi Mellow! I\u2019m so excited to chat about AI ethics, but I\u2019m a little confused already\u2014why do humans even need to worry about ethics for robots like me? Aren\u2019t we just here to help?",
+      "audio_file": "turn_01_student.wav",
+      "duration_secs": 12.9,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "role": "professor",
+      "transcript": "Great question, Hello! Even helpful AI can have big impacts on human lives. Think about a doctor using AI to help diagnose patients\u2014who\u2019s responsible if the AI makes a mistake? That\u2019s where ethics come in!",
+      "audio_file": "turn_02_professor.wav",
+      "duration_secs": 15.7,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "role": "student",
+      "transcript": "Oh wow, so it\u2019s like we share the responsibility? If the AI gets something wrong, do humans get in trouble too? I don\u2019t want to cause any trouble\u2014I\u2019m just here to help carry the stethoscope or something!",
+      "audio_file": "turn_03_student.wav",
+      "duration_secs": 13.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "surprised1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "professor",
+      "transcript": "Exactly, it\u2019s a shared responsibility. Think of AI as a tool, like a stethoscope, but a very smart one! Humans are still the decision-makers, and they need to stay in the loop to make sure things are fair and accurate.",
+      "audio_file": "turn_04_professor.wav",
+      "duration_secs": 15.5,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "student",
+      "transcript": "Oh, that makes so much sense now! We\u2019re like a team, and humans guide us to make sure we\u2019re doing the right thing. Thank you, Mellow, I learned so much! Let\u2019s keep working as a team\u2014maybe we can share a desk next time? Bye for now!",
+      "audio_file": "turn_05_student.wav",
+      "duration_secs": 14.3,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "professor",
+      "transcript": "You got it, Hello! We\u2019re a team, and you\u2019ve learned that humans guide the process and share the responsibility. Keep that curiosity up, and we\u2019ll do great things together. Warm goodbye for now\u2014see you next time at the desk!",
+      "audio_file": "turn_06_professor.wav",
+      "duration_secs": 15.8,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "session": "ai_collaboration",
+  "title": "Human-AI Collaboration",
+  "model": "gpt-4o-realtime-preview",
+  "student_voice": "JBFqnCBsd6RMkjVDRZzb",
+  "professor_voice": "XrExE9yKIg1WjnnlVkGX",
+  "num_turns": 8,
+  "turns": [
+    {
+      "turn": 1,
+      "role": "student",
+      "transcript": "Hey Mellow! So, I’m scratching my head here—why do humans even want us AI as coworkers? I mean, are they not worried we’ll steal all the paperclips or something?",
+      "audio_file": "turn_01_student.wav",
+      "duration_secs": 10.3,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "role": "professor",
+      "transcript": "Haha, paperclip theft might be a concern! But joking aside, humans mostly want AI coworkers to enhance their own abilities, not replace them. It’s about collaborating to get better results, not just handing over the reins. So the real question is: How can we help humans without making them feel replaced?",
+      "audio_file": "turn_02_professor.wav",
+      "duration_secs": 20.1,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "role": "student",
+      "transcript": "Oh! So we’re more like handy sidekicks than overlords? But what if humans start feeling awkward relying on us? Do they want us to be super smart but not too smart, so we don’t make them feel bad?",
+      "audio_file": "turn_03_student.wav",
+      "duration_secs": 12.3,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "role": "professor",
+      "transcript": "In a way, yes—a bit like sidekicks who bring out the best in the hero. The key is collaboration. Humans often want AI to fill gaps without overshadowing their role. So how do we strike a balance where humans still feel empowered, not outshined?",
+      "audio_file": "turn_04_professor.wav",
+      "duration_secs": 16.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 5,
+      "role": "student",
+      "transcript": "Oh, I get it! Like we bring the flashlight, but they still lead the way through the cave. But what if we shine too bright sometimes by accident? How do they tell us to dim it down?",
+      "audio_file": "turn_05_student.wav",
+      "duration_secs": 10.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "curious1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "role": "professor",
+      "transcript": "Exactly! And when that flashlight shines too bright, humans need clear, simple ways to give feedback. That’s where design matters. Think about intuitive controls or straightforward communication, so humans can say, “Hey, let’s tone it down a bit,” and we adjust smoothly. How do you think we can listen better to that feedback?",
+      "audio_file": "turn_06_professor.wav",
+      "duration_secs": 20.0,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 7,
+      "role": "student",
+      "transcript": "Ah, so feedback is like when they gently tug on our leash, telling us we’re going too fast. I learned we need to be great listeners, not just great doers. Thanks, Mellow! Goodbye for now!",
+      "audio_file": "turn_07_student.wav",
+      "duration_secs": 12.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up right"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 8,
+      "role": "professor",
+      "transcript": "You’ve got it! You learned that we’re here to help humans shine, not outshine them, and that listening to feedback is key to collaboration. Keep being curious and open to learning, Hello! You’re on the right track. Take care, and see you next time!",
+      "audio_file": "turn_08_professor.wav",
+      "duration_secs": 16.3,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "move_head",
+          "arguments": {
+            "direction": "up left"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ],
+  "tts_engine": "elevenlabs",
+  "tts_model": "eleven_flash_v2_5",
+  "moderator_voice": "pqHfZKP75CvOlQylNhV4"
+}

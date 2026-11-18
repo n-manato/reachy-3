@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment secrets
+.env
+
+# Logs
+*.log
+
+# Generated speech-audio cache (web display transcodes WAV->MP3 on demand)
+output/**/*.mp3
+
+# local backups of .env (contain real keys)
+.env.bak*
