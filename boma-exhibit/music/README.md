@@ -8,5 +8,5 @@ nothing to configure, nothing to disable.
 
 Keep the file small. The browser streams it over the same Wi-Fi the robots use
 for motion control, and a large file competes with them. The reference exhibit
-at `../../Reachy_3/music2/` has re-encoded, exhibit-sized versions of its
+at `../ethics-podcast/music2/` has re-encoded, exhibit-sized versions of its
 tracks if you want a starting point.

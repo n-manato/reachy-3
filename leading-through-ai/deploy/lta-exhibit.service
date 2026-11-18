@@ -7,7 +7,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/Documents/DEV/Reachy_LTA
+WorkingDirectory=%h/Documents/DEV/reachy-3/leading-through-ai
 ExecStart=%h/.local/bin/uv run --no-sync lta-exhibit --exhibit
 Environment=PYTHONUNBUFFERED=1
 # SIGINT → KeyboardInterrupt, so BGM / robot workers are cleaned up on stop.

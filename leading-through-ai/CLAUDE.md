@@ -23,8 +23,8 @@ A/B/C is "aligned" with one robot (A NOVA, B SAGE, C AEGIS).
 `personas.SHARED_CONTEXT` lists the audience by industry so lines can address
 groups ("the bankers in the room"), never individuals.
 
-Derived from `../Africa/Reachy_03` (BOMA: robot workers, sway, fade-to-rest,
-web display mechanics) and `../Reachy_3` (OpenAI scripts, HTTP robot-speaker
+Derived from `../boma-exhibit` (BOMA: robot workers, sway, fade-to-rest,
+web display mechanics) and `../ethics-podcast` (OpenAI scripts, HTTP robot-speaker
 playback).
 
 ## Architecture: draft → review → render → play
@@ -94,7 +94,7 @@ branch_A/B/C (×3 lines), close = 22 clips. One path ≈ 3 min speech + 20 s vot
 - **Public URL:** https://rm2.aiccore-uno.ai/ is a Tunnelin tunnel to this PC's
   port 8010, owned by `lta-gateway` (`gateway.py`, user unit
   `deploy/lta-gateway.service`): `/lta/...` -> LTA :8020 (prefix stripped),
-  everything else -> Reachy_3 Ethics Podcast :8011 (its .env was moved off
+  everything else -> Ethics Podcast (../ethics-podcast) :8011 (its .env was moved off
   8010). Pages derive `BASE` from their own path, so they work at `/` and
   under `/lta/`. The down page is 503 (the tunnel replaces 502 bodies).
 - Ethics Podcast drives the same robot (.163): stop `ethics-podcast` before

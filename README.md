@@ -13,11 +13,14 @@ self-contained project with its own README, dependencies and deployment files.
 The nine-robot orchestra lives in a separate repository,
 [reachy-10](https://github.com/n-manato/reachy-10).
 
-## How this repository is maintained
+## Layout
 
-Each exhibit is developed and deployed from its own working directory, and its
-full commit history is merged in here with `git subtree`. `./sync.sh` pulls the
-latest commits from the three working directories and pushes the result.
+One repository, one folder per exhibit. Each folder is run in place: it holds
+its own virtual environment and `.env`, and the systemd units under each
+`deploy/` directory point at it.
+
+`ethics-podcast/` is also published, with identical history, to the lab's
+exhibit repository; `./push-ethics-podcast-to-org.sh` sends new commits there.
 
 Secrets (`.env`), licensed background music and generated speech audio are not
 part of this repository; each project's README explains how to supply them.

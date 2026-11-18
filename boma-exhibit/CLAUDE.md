@@ -11,7 +11,7 @@ visitors to BOMA. Each speaks a different language.
 | PULAAR | right | 192.168.3.132 | Fulfulde | deadpan; secretly understands English |
 
 The script is `Scripts/Robot.pdf`, transcribed into `src/boma_exhibit/script_data.py`.
-Derived from the Ethics Podcast exhibit at `../../Reachy_3`, which shares this
+Derived from the Ethics Podcast exhibit at `../ethics-podcast`, which shares this
 hardware, this Wi-Fi and most of this architecture.
 
 ## Architecture: pre-render everything, then play
