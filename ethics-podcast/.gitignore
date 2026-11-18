@@ -20,3 +20,7 @@ output/**/*.mp3
 
 # local backups of .env (contain real keys)
 .env.bak*
+
+# Background music: supplied locally, not committed
+music/*.mp3
+music2/*.mp3
