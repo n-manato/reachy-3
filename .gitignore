@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment secrets
+.env
+
+# Logs
+*.log
+
+# Generated speech-audio cache (web display transcodes WAV->MP3 on demand)
+output/**/*.mp3
+
+# TTS probe scratch output
+output/probe/
+.playback_state.json
+
+# third-party background music (see music/README for how to supply one)
+music/*.mp3
+# generated speech (rebuilt from the scripts by the TTS step)
+output/**/*.wav

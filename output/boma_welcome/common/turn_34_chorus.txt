@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji,PSIwmc50KeuW20kehlBE,8dvhVJc85Oy9HBPo11aI
+text=Welcome to BOMA!

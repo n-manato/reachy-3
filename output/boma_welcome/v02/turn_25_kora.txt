@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=And Pulaar adds that Africa is its people, its knowledge and its traditions. Got it? Three robots. Three languages.

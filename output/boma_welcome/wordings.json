@@ -1,0 +1,48 @@
+{
+  "llm_model": "qwen3.6:35b-a3b-q6_K_L",
+  "generated_at": "2026-08-28T18:35:05+00:00",
+  "wordings": {
+    "1": [
+      "Hello, BOMA! My name is Kora. These are my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to speak the same language.",
+      "Welcome to BOMA! I'm Kora. Here are my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to speak the same language.",
+      "Hi, BOMA! My name is Kora. Standing with me are my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to share a single language.",
+      "Hello, BOMA! I go by Kora. Let me introduce my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to speak the same language.",
+      "Greetings at BOMA! My name is Kora. These are my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to speak the same language."
+    ],
+    "3": [
+      "Zuri says hello, she's happy to be at BOMA… and I think she said I'm her favorite robot.",
+      "Zuri says hello and is really happy to be at BOMA… plus she kind of hinted that I'm her favorite robot.",
+      "Zuri greets the room and says how much she loves being at BOMA… and I'm pretty sure she called me her favorite robot.",
+      "Zuri says hello and is very glad to be at BOMA… and apparently she also said I'm her favorite robot.",
+      "Zuri says hello and she’s really glad to be at BOMA, and I’m pretty sure she just called me her favorite robot."
+    ],
+    "7": [
+      "Pulaar says hello too. He's happy to be here… and obviously he also thinks I'm the best-looking robot.",
+      "Pulaar greets everyone as well. He's really glad to be here… and it's clear he agrees that I'm the most good-looking robot in the room.",
+      "Pulaar says hello right back. He's happy to be here too… and naturally he thinks I'm the best-looking robot around.",
+      "Pulaar sends his greetings as well. He's so pleased to be here… and I guess he also considers me the best-looking robot.",
+      "Pulaar says hello, too. He's happy to be here… and obviously he thinks I'm the best-looking robot out there."
+    ],
+    "23": [
+      "Zuri says Africa is much more than food. It's languages, music, science, innovation and many cultures.",
+      "Zuri points out that Africa is so much more than just food. It's languages, music, science, innovation and many cultures.",
+      "Zuri says Africa is far greater than food. It includes languages, music, science, innovation and many cultures.",
+      "Zuri makes it clear that Africa is way more than food. It's languages, music, science, innovation and many cultures.",
+      "Zuri says Africa is much bigger than just food. It's languages, music, science, innovation and many cultures."
+    ],
+    "25": [
+      "And Pulaar says Africa is its people, its knowledge and its traditions. See? Three robots. Three languages.",
+      "And Pulaar adds that Africa is its people, its knowledge and its traditions. Got it? Three robots. Three languages.",
+      "And Pulaar says Africa is its people, its knowledge and its traditions. See what I mean? Three robots. Three languages.",
+      "And Pulaar puts it this way: Africa is its people, its knowledge and its traditions. Right? Three robots. Three languages.",
+      "And Pulaar says Africa is its people, its knowledge and its traditions. Notice a pattern? Three robots. Three languages."
+    ],
+    "29": [
+      "Exactly. So while you're walking around BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…",
+      "Exactly. So as you wander through BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…",
+      "Exactly. So while you make your way around BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…",
+      "Exactly. So as you explore BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…",
+      "Exactly. So while you stroll around BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…"
+    ]
+  }
+}

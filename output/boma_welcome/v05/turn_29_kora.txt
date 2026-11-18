@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=Exactly. So while you stroll around BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…

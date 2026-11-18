@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=8dvhVJc85Oy9HBPo11aI
+text=KORAAAA!
