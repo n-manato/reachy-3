@@ -11,7 +11,7 @@ self-contained project with its own README, dependencies and deployment files.
 | [boma-exhibit/](boma-exhibit/) | BOMA | Perform a fixed welcome sketch, each robot speaking a different language. |
 
 The nine-robot orchestra lives in a separate repository,
-[reachy-10-orchestra](https://github.com/n-manato/reachy-10-orchestra).
+[reachy-10](https://github.com/n-manato/reachy-10).
 
 ## How this repository is maintained
 
