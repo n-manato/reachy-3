@@ -1,0 +1,254 @@
+"""Forward the Reachy Mini daemon ports to a local address through SSH (port 22).
+
+The campus network blocks TCP 8000/8443 from the VPN but allows SSH, so the
+daemon is reached through an SSH tunnel over the robot's eduroam address.
+Each robot gets its own loopback address, so several tunnels can run at once
+with the same port numbers (the SDK always uses 8443 for WebRTC signaling).
+
+Usage:
+    python -m reachy_kit.tunnel ROBOT      ROBOT = a name from admin/robots.json, or an IP
+
+admin/robots.json (not committed, see admin/robots.example.json) maps names to
+[robot IP, local address], e.g. {"mini-2": ["10.0.0.12", "127.0.0.2"]}.
+
+Keep it running, then use the robot from code with reachy_kit.connect("127.0.0.2").
+
+It also starts, on the robot (reachy_kit/robot/*.py):
+    http://<local address>:8090/      USB webcam watching the robot (if plugged in)
+    http://<local address>:8091/      the robot's own camera
+    http://<local address>:8092/mic   robot microphone (raw PCM)
+    tcp <local address>:8093          robot speaker (raw PCM)
+because the SDK's WebRTC camera/audio (UDP) does not get through the VPN.
+"""
+
+import getpass
+import hashlib
+import json
+import logging
+import os
+import select
+import socket
+import socketserver
+import sys
+import threading
+
+import paramiko
+
+# paramiko logs every refused port-forward at ERROR; make_handler reports it once.
+logging.getLogger("paramiko.transport").setLevel(logging.CRITICAL)
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROBOTS_PATH = os.path.join(os.path.dirname(HERE), "admin", "robots.json")
+WEBCAM_PORT = 8090        # USB webcam watching the robot (MJPEG)
+ROBOT_CAMERA_PORT = 8091  # robot's own camera (MJPEG)
+MIC_PORT = 8092           # robot and webcam microphones (raw PCM over HTTP)
+SPEAKER_PORT = 8093       # robot speaker (raw PCM over TCP)
+# 8000 daemon API, 8443 WebRTC signaling (WebRTC media itself does not pass the VPN)
+PORTS = [8000, 8443, WEBCAM_PORT, ROBOT_CAMERA_PORT, MIC_PORT, SPEAKER_PORT]
+ROBOT_SCRIPTS = ["webcam_stream.py", "audio_bridge.py"]  # in robot/, uploaded to REMOTE_DIR
+REMOTE_DIR = "/home/pollen"
+
+
+def start_on_robot(client: paramiko.SSHClient, tag: str, command: str, match: str) -> None:
+    """Run `python3 <command>` on the robot unless a process matching `match` is running.
+
+    The process stops when the SSH session that started it closes. An already
+    running one (started by someone else's tunnel) is reused, not restarted,
+    so e.g. a stream keeps the resolution the first user chose.
+    """
+    # "[p]ython3" so the pattern does not match the shell running pgrep itself
+    _, out, _ = client.exec_command(f"pgrep -f '[p]ython3 {REMOTE_DIR}/{match}'")
+    if out.read().strip():
+        print(f"{tag} already running, reusing it", flush=True)
+        return
+    chan = client.get_transport().open_session()
+    chan.get_pty()  # closing the session then kills the remote process
+    chan.exec_command(f"python3 {REMOTE_DIR}/{command}")
+
+    def relay() -> None:
+        for line in iter(chan.makefile("r").readline, ""):
+            print(f"{tag} {line.rstrip()}", flush=True)
+
+    threading.Thread(target=relay, daemon=True).start()
+
+
+def replace_old_audio_bridge(client: paramiko.SSHClient) -> None:
+    """Stop a running audio bridge from another version of the kit, so start_on_robot starts this one.
+
+    A bridge started by someone else's older kit would otherwise be reused and
+    lack newer endpoints (e.g. /webcam_mic). The bridge reports a hash of its
+    own script; the robot only runs one, so it is restarted when that differs.
+    """
+    with open(os.path.join(HERE, "robot", "audio_bridge.py"), "rb") as f:
+        version = hashlib.sha256(f.read()).hexdigest()[:12]
+    _, out, _ = client.exec_command(
+        f"pgrep -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py' >/dev/null"
+        f" && curl -s -m 3 http://127.0.0.1:{MIC_PORT}/version")
+    running = out.read().decode(errors="replace").strip()
+    if out.channel.recv_exit_status() != 0 or running == version:
+        return  # none running, or the same version
+    print("[audio] replacing an audio bridge from another kit version", flush=True)
+    _, out, _ = client.exec_command(
+        f"pkill -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py';"
+        f" for i in $(seq 20); do pgrep -f '[p]ython3 {REMOTE_DIR}/audio_bridge.py' >/dev/null || break; sleep 0.1; done")
+    out.channel.recv_exit_status()
+
+
+def start_robot_services(client: paramiko.SSHClient, webcam_args: str = "", robot_camera: bool = True) -> None:
+    """Upload the robot/ scripts and start the camera streams and the audio bridge.
+
+    robot_camera=False leaves out the robot's own camera stream (the USB webcam
+    stays): it saves VPN bandwidth when the connection is the bottleneck.
+    """
+    sftp = client.open_sftp()
+    for name in ROBOT_SCRIPTS:
+        with open(os.path.join(HERE, "robot", name), "rb") as f:
+            sftp.putfo(f, f"{REMOTE_DIR}/{name}")
+    sftp.close()
+    replace_old_audio_bridge(client)
+    sources = [("webcam", WEBCAM_PORT)] + ([("robot", ROBOT_CAMERA_PORT)] if robot_camera else [])
+    for source, port in sources:
+        start_on_robot(client, f"[{source} stream]",
+                       f"webcam_stream.py --port {port} --source {source} {webcam_args}".strip(),
+                       match=f"webcam_stream.py --port {port} ")
+    start_on_robot(client, "[audio]", "audio_bridge.py", match="audio_bridge.py")
+
+
+def make_handler(transport: paramiko.Transport, remote_port: int) -> type:
+    reported = False  # e.g. 8090 is refused on every poll when there is no webcam
+
+    class ForwardHandler(socketserver.BaseRequestHandler):
+        def handle(self) -> None:
+            nonlocal reported
+            try:
+                chan = transport.open_channel(
+                    "direct-tcpip", ("127.0.0.1", remote_port), self.request.getpeername()
+                )
+            except Exception as e:
+                if not reported:
+                    print(f"nothing listening on robot port {remote_port} ({e})", flush=True)
+                    reported = True
+                self.request.close()
+                return
+            try:
+                while True:
+                    r, _, _ = select.select([self.request, chan], [], [])
+                    if self.request in r:
+                        data = self.request.recv(65536)
+                        if not data:
+                            break
+                        chan.sendall(data)
+                    if chan in r:
+                        data = chan.recv(65536)
+                        if not data:
+                            break
+                        self.request.sendall(data)
+            except OSError:
+                pass  # either side dropped the connection
+            finally:
+                chan.close()
+                self.request.close()
+
+    return ForwardHandler
+
+
+class ThreadedServer(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+    # On Windows SO_REUSEADDR lets a second tunnel silently bind the same
+    # port; keep it off there so a busy port fails loudly.
+    allow_reuse_address = sys.platform != "win32"
+
+
+class ThreadedServerV6(ThreadedServer):
+    # Windows resolves "localhost" to ::1 first; without a v6 listener every
+    # connection waits ~2 s before falling back to 127.0.0.1.
+    address_family = socket.AF_INET6
+
+
+CONTROL_PORTS = [8000, 8443]
+MEDIA_PORTS = [WEBCAM_PORT, ROBOT_CAMERA_PORT, MIC_PORT, SPEAKER_PORT]
+
+
+def _ssh(robot_ip: str, user: str, password: str) -> paramiko.SSHClient:
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(robot_ip, username=user, password=password, timeout=10,
+                   allow_agent=False, look_for_keys=False)
+    client.get_transport().set_keepalive(30)
+    return client
+
+
+def open_tunnel(robot_ip: str, password: str, local_addr: str = "127.0.0.1",
+                 user: str = "pollen", webcam_args: str = "", robot_camera: bool = True) -> tuple[list, list]:
+    """SSH to the robot, start the robot-side services and forward PORTS to local_addr.
+
+    Control (daemon API) and media (camera/audio streams) use separate SSH
+    connections: over a slow VPN, video queued in a shared connection delays
+    motion commands by seconds, and the SDK then times out.
+
+    webcam_args is passed to both robot/webcam_stream.py instances (webcam and
+    robot camera), e.g. "--width 640 --height 360 --fps 8". robot_camera=False
+    does not start the robot-camera stream.
+    Returns (ssh clients, local servers) for close_tunnel().
+    """
+    control = _ssh(robot_ip, user, password)
+    media = _ssh(robot_ip, user, password)
+    start_robot_services(media, webcam_args, robot_camera)
+
+    listen = [(ThreadedServer, local_addr)]
+    if local_addr == "127.0.0.1":
+        listen.append((ThreadedServerV6, "::1"))  # so "localhost" works too
+    servers = []
+    for client, ports in ((control, CONTROL_PORTS), (media, MEDIA_PORTS)):
+        for port in ports:
+            handler = make_handler(client.get_transport(), port)
+            for server_cls, addr in listen:
+                server = server_cls((addr, port), handler)
+                threading.Thread(target=server.serve_forever, daemon=True).start()
+                servers.append(server)
+            print(f"tunnel up: {local_addr}:{port} -> {robot_ip}:{port}", flush=True)
+    return [control, media], servers
+
+
+def close_tunnel(clients: list, servers: list) -> None:
+    for server in servers:
+        server.shutdown()
+        server.server_close()
+    for client in clients:
+        client.close()
+
+
+def wait_forever() -> None:
+    """Block until Ctrl+C (short waits so the interrupt is seen on Windows)."""
+    stop = threading.Event()
+    while not stop.wait(0.5):
+        pass
+
+
+def load_robots() -> dict:
+    """name -> (robot IP, local address) from robots.json, if present."""
+    try:
+        with open(ROBOTS_PATH, encoding="utf-8") as f:
+            return {name: tuple(v) for name, v in json.load(f).items()}
+    except FileNotFoundError:
+        return {}
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    arg = sys.argv[1]
+    robot_ip, local_addr = load_robots().get(arg, (arg, "127.0.0.1"))
+    password = os.environ.get("REACHY_PASSWORD") or getpass.getpass(f"pollen@{robot_ip} password: ")
+    client, servers = open_tunnel(robot_ip, password, local_addr)
+    print("Ctrl+C to stop", flush=True)
+    try:
+        wait_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        close_tunnel(client, servers)
+
+
+if __name__ == "__main__":
+    main()
