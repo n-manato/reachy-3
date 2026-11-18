@@ -15,10 +15,13 @@ Motion architecture:
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import logging
 import math
+import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -38,6 +41,19 @@ logger = logging.getLogger(__name__)
 BASE_OUTPUT_DIR = Path("output")
 
 AudioMode = Literal["robot", "computer", "surround", "hybrid_surround", "display"]
+
+# Upper bound on the daemon HTTP play request at the start of a turn. If the
+# robot is off Wi-Fi the turn goes on (silent) rather than freezing the show.
+HTTP_AUDIO_START_TIMEOUT = 10.0
+
+# Live voice-output switch (web /top page). A line moved mid-way resumes on the
+# new output where it is now; the robot side skips this much further ahead to
+# cover uploading the rest of the line to the daemon. A line with less than
+# HANDOFF_MIN_REMAINING left just finishes where it is.
+ROBOT_HANDOFF_LEAD = 0.5
+HANDOFF_MIN_REMAINING = 0.4
+OUTPUT_POLL_SECONDS = 0.1
+HANDOFF_DIR = Path(tempfile.gettempdir()) / "ethics_podcast_handoff"
 
 ROLE_PAN = {
     "student": -0.85,    # Bentham-Bot, left
@@ -213,17 +229,36 @@ async def _play_robot_audio(
     pcm: np.ndarray,
     sample_rate: int,
     robot_audio_delay: float = 0.0,
+    audio_path: Path | None = None,
 ) -> None:
-    """Play audio through robot speaker."""
-    if robot is None:
-        return
+    """Play audio through robot speaker.
 
-    if not robot.audio_ready:
-        print("  Robot speaker skipped because audio is not ready.")
+    Streams PCM over the SDK media path when the worker reports it ready.
+    Otherwise falls back to the daemon HTTP playback of the turn's WAV file
+    (see ``RobotController.play_sound_file``), which needs no GStreamer WebRTC
+    support on this PC.
+    """
+    if robot is None:
         return
 
     if robot_audio_delay > 0:
         await asyncio.sleep(robot_audio_delay)
+
+    if not robot.audio_ready:
+        if audio_path is not None:
+            loop = asyncio.get_running_loop()
+            try:
+                started = await asyncio.wait_for(
+                    loop.run_in_executor(None, robot.play_sound_file, audio_path),
+                    timeout=HTTP_AUDIO_START_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                started = False
+                print("  Robot speaker: play request did not complete in time.")
+            if started:
+                return
+        print("  Robot speaker skipped because audio is not ready.")
+        return
 
     chunk_size = sample_rate
 
@@ -239,6 +274,7 @@ async def _stream_audio(
     pan: float = 0.0,
     tv_audio_delay: float = 0.0,
     robot_audio_delay: float = 0.0,
+    audio_path: Path | None = None,
 ) -> None:
     """Send audio to robot speaker, computer speaker, surround, or both."""
 
@@ -249,7 +285,9 @@ async def _stream_audio(
         return
 
     if audio_mode == "robot":
-        await _play_robot_audio(robot, pcm, sample_rate, robot_audio_delay=0.0)
+        await _play_robot_audio(
+            robot, pcm, sample_rate, robot_audio_delay=0.0, audio_path=audio_path
+        )
         return
 
     if audio_mode in ("computer", "surround"):
@@ -269,6 +307,7 @@ async def _stream_audio(
                 pcm,
                 sample_rate,
                 robot_audio_delay=robot_audio_delay,
+                audio_path=audio_path,
             ),
             _play_tv_audio(
                 pcm,
@@ -279,6 +318,269 @@ async def _stream_audio(
             ),
         )
         return
+
+def _turn_audio_mode(audio_mode: AudioMode, display=None) -> AudioMode:
+    """Where this turn's voice plays, given the configured mode and display.
+
+    The web display carries a live voice-output switch on its /top page
+    (``audio_output``: "robot" | "browser"); when present it decides, and the
+    configured mode was only its start value. Otherwise a display that can
+    play speech takes over the computer / surround modes, as before.
+    """
+    live_mode = _display_output_mode(display)
+    if live_mode is not None:
+        return live_mode
+    if (
+        display is not None
+        and getattr(display, "plays_speech_audio", False)
+        and audio_mode in ("computer", "surround")
+    ):
+        return "display"
+    return audio_mode
+
+
+def _display_output_mode(display) -> AudioMode | None:
+    """The voice mode the display's live switch asks for, or None if it has none."""
+    output = getattr(display, "audio_output", None)
+    if output == "browser":
+        return "display"
+    if output == "robot":
+        return "robot"
+    return None
+
+
+# ── Live output switch: move the voice and the BGM while they play ─────────
+
+
+@dataclass
+class _VoiceLine:
+    """The line being spoken right now, so a switch can move it mid-way."""
+
+    speaker: RobotController
+    role: str
+    audio_path: Path
+    mode: AudioMode
+    started: float  # time.monotonic() when the voice started
+    duration: float
+
+    def elapsed(self) -> float:
+        return time.monotonic() - self.started
+
+
+class _LiveVoice:
+    """Holder shared by the turn loop (writer) and the switch follower (reader)."""
+
+    def __init__(self) -> None:
+        self.line: _VoiceLine | None = None
+
+
+async def _play_robot_from(
+    robot: RobotController, line: _VoiceLine, live: _LiveVoice
+) -> None:
+    """Play the rest of ``line`` on its robot, from where it is now."""
+    offset = line.elapsed() + ROBOT_HANDOFF_LEAD
+    if offset >= line.duration - HANDOFF_MIN_REMAINING:
+        return
+
+    sample_rate, pcm = wavfile.read(line.audio_path)
+    start = int(offset * sample_rate)
+
+    if robot.audio_ready:
+        tail = pcm[start:].astype(np.float32) / 32768.0
+        for i in range(0, len(tail), sample_rate):
+            robot.push_audio(tail[i : i + sample_rate], source_rate=sample_rate)
+        return
+
+    # HTTP fallback: the daemon can only play a file from its start, so upload
+    # the remainder as its own file. The name carries the offset so the
+    # daemon-side upload cache never serves a different cut.
+    session_dir = HANDOFF_DIR / line.audio_path.parent.name
+    session_dir.mkdir(parents=True, exist_ok=True)
+    tail_path = session_dir / f"{line.audio_path.stem}.from{int(offset * 1000)}ms.wav"
+    wavfile.write(tail_path, sample_rate, pcm[start:])
+
+    loop = asyncio.get_running_loop()
+    if await loop.run_in_executor(None, robot.upload_sound_file, tail_path) is None:
+        print("  Robot speaker: could not upload the rest of the line.")
+        return
+    if live.line is not line:
+        return  # the line ended while uploading
+    await loop.run_in_executor(None, robot.play_sound_file, tail_path)
+
+
+async def _hand_off_voice(display, line: _VoiceLine, live: _LiveVoice) -> None:
+    """Move the line being spoken to ``line.mode`` (already set by the caller)."""
+    if line.mode == "display":
+        # Silence the robot first (waiting out an in-flight play request so it
+        # cannot land after the stop), then resume in the browser.
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None, functools.partial(line.speaker.stop_sound, 3.0)
+        )
+        offset = line.elapsed()
+        if live.line is line and offset < line.duration - HANDOFF_MIN_REMAINING:
+            display.play_speech(line.role, line.audio_path, offset)
+        return
+
+    # To the robot: the page already paused its voice when the switch flipped.
+    await _play_robot_from(line.speaker, line, live)
+
+
+class _DiscussionBgm:
+    """The discussion's background music, in the browser or on this PC's mixer.
+
+    The web display's voice-output switch moves it live, together with the
+    voices: BROWSER puts all sound in the browser.
+    """
+
+    BROWSER_VOLUME = 0.18
+
+    def __init__(self, path: Path, display) -> None:
+        self.path = path
+        self.display = display
+        self.mixer: BGMManager | None = None
+        self.in_browser = False
+
+    def _browser_ok(self) -> bool:
+        return self.display is not None and getattr(self.display, "plays_bgm_audio", False)
+
+    def _new_mixer(self) -> BGMManager:
+        return BGMManager(self.path, normal_volume=0.40, speaking_volume=0.18)
+
+    async def start(self, in_browser: bool) -> None:
+        if in_browser and self._browser_ok():
+            self.display.set_bgm(self.path, volume=self.BROWSER_VOLUME)
+            self.in_browser = True
+            return
+        self.mixer = self._new_mixer()
+        await self.mixer.intro()
+        # 会話パート全体ではBGMを低く固定する
+        await self.mixer.fade_to(self.mixer.speaking_volume, duration=0.8)
+
+    async def move(self, in_browser: bool) -> None:
+        if in_browser == self.in_browser or not self._browser_ok():
+            return
+        if in_browser:
+            self._drop_mixer()
+            self.display.set_bgm(self.path, volume=self.BROWSER_VOLUME)
+            self.in_browser = True
+            return
+        self.display.stop_bgm()
+        self.in_browser = False
+        mixer = self._new_mixer()
+        self.mixer = mixer
+
+        # pygame decodes the whole track up front (seconds for an MP3). Do it
+        # off the event loop so speech sway and motion keep running mid-line.
+        # Whoever drops self.mixer meanwhile (STOP, a switch back) wins: the
+        # loader then silences what it just started.
+        def load() -> None:
+            mixer.start()
+            if self.mixer is not mixer:
+                mixer.hard_stop()
+
+        await asyncio.get_running_loop().run_in_executor(None, load)
+        if self.mixer is mixer:
+            await mixer.fade_to(mixer.speaking_volume, duration=1.0)
+
+    def _drop_mixer(self) -> None:
+        # Clear the reference before stopping, so a loader thread still
+        # decoding sees it was dropped (see move()).
+        mixer, self.mixer = self.mixer, None
+        if mixer is not None:
+            mixer.hard_stop()
+
+    async def stop(self) -> None:
+        """Natural end of the discussion: fade out gently."""
+        mixer, self.mixer = self.mixer, None
+        if mixer is not None:
+            await mixer.stop()
+            mixer.hard_stop()  # no-op after the fade; catches a mixer still loading
+        if self.in_browser:
+            self._stop_browser()
+
+    def hard_stop(self) -> None:
+        """Safety net for Ctrl+C / STOP / errors: no awaits."""
+        self._drop_mixer()
+        if self.in_browser:
+            self._stop_browser()
+
+    def _stop_browser(self) -> None:
+        try:
+            self.display.stop_bgm()
+        except Exception:
+            pass
+        self.in_browser = False
+
+
+async def _follow_output_switch(display, live: _LiveVoice, bgm: _DiscussionBgm) -> None:
+    """Apply the /top voice-output switch the moment it flips.
+
+    The line being spoken moves to the new output from where it is, and the
+    BGM moves with it. Later lines simply start on the new output.
+    """
+    while True:
+        await asyncio.sleep(OUTPUT_POLL_SECONDS)
+        mode = _display_output_mode(display)
+        if mode is None:
+            continue
+        try:
+            # Voice first: the BGM's mixer fade-in takes a second.
+            line = live.line
+            if line is not None and line.mode != mode:
+                line.mode = mode
+                print(f"  Voice output -> {'browser' if mode == 'display' else 'robot'} (mid-line)")
+                await _hand_off_voice(display, line, live)
+            await bgm.move(mode == "display")
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("Voice output switch failed: %s", e)
+
+
+async def _preload_robot_audio(
+    robots: dict[str, RobotController],
+    turns: list[dict],
+    output_dir: Path,
+    audio_mode: AudioMode,
+) -> None:
+    """Upload each turn's WAV to its speaker before playback starts.
+
+    Only for the robot-speaker audio modes, and only for robots on the HTTP
+    fallback path (SDK audio not ready): uploading up front keeps the per-turn
+    start latency to a single small POST so the voice stays in sync with the
+    speech sway.
+    """
+    if audio_mode not in ("robot", "hybrid_surround"):
+        return
+
+    per_role: dict[str, list[Path]] = {}
+    for turn in turns:
+        role = turn.get("role")
+        robot = robots.get(role)
+        if robot is None or robot.audio_ready:
+            continue
+        path = output_dir / turn["audio_file"]
+        if path.exists():
+            per_role.setdefault(role, []).append(path)
+
+    if not per_role:
+        return
+
+    print("  SDK robot audio not available; uploading turn audio to the robots (HTTP playback)...")
+
+    loop = asyncio.get_running_loop()
+    counts = await asyncio.gather(
+        *[
+            loop.run_in_executor(None, robots[role].preload_sound_files, paths)
+            for role, paths in per_role.items()
+        ]
+    )
+
+    for (role, paths), ready in zip(per_role.items(), counts):
+        hint = "" if ready else "  (daemon unreachable, or too old for /api/media/sounds/upload?)"
+        print(f"    {role}: {ready}/{len(paths)} turn files ready on robot{hint}")
+
 
 async def _drive_speech_sway(
     robot: RobotController,
@@ -429,6 +731,7 @@ async def _play_turn(
     role: str | None = None,
     text: str = "",
     turn_number: int | None = None,
+    live: _LiveVoice | None = None,
 ) -> None:
     """Play one turn with audio, speech sway, actions, and listener movement.
 
@@ -485,7 +788,11 @@ async def _play_turn(
         )
     if display is not None:
         display.show_subtitle(
-            role=role, text=text, turn_number=turn_number, audio_path=audio_path
+            role=role,
+            text=text,
+            turn_number=turn_number,
+            audio_path=audio_path,
+            speech_audio=audio_mode == "display",
         )
 
     stop = asyncio.Event()
@@ -502,6 +809,7 @@ async def _play_turn(
             pan=pan,
             tv_audio_delay=tv_audio_delay,
             robot_audio_delay=robot_audio_delay,
+            audio_path=audio_path,
         ),
         _replay_tool_calls(speaker, tool_calls, stop),
         asyncio.sleep(duration + 0.01),
@@ -518,7 +826,21 @@ async def _play_turn(
             )
         )
 
-    await asyncio.gather(*tasks)
+    # Publish the line so the live output switch can move it mid-way.
+    if live is not None and role is not None:
+        live.line = _VoiceLine(
+            speaker=speaker,
+            role=role,
+            audio_path=audio_path,
+            mode=audio_mode,
+            started=time.monotonic(),
+            duration=duration,
+        )
+    try:
+        await asyncio.gather(*tasks)
+    finally:
+        if live is not None:
+            live.line = None
     stop.set()
 
     if ENABLE_HEAD_POSTURE:
@@ -596,6 +918,9 @@ async def run_playback_with_connected_robots(
 
     labels = ROLE_LABELS
 
+    start_audio_mode = _turn_audio_mode(audio_mode, display)
+    await _preload_robot_audio(robots, turns, output_dir, start_audio_mode)
+
     print("\nStarting playback!\n")
     _diag(
         "playback_start "
@@ -609,24 +934,25 @@ async def run_playback_with_connected_robots(
     # When the browser display is the audio output (TV / computer), play the BGM
     # in the browser too — mono/centered — so ALL audio comes from one place and
     # the on-screen mute covers it. Otherwise fall back to the local pygame mixer.
-    use_browser_bgm = (
-        display is not None
-        and getattr(display, "plays_bgm_audio", False)
-        and audio_mode in ("computer", "surround")
+    bgm = _DiscussionBgm(bgm_path, display)
+    await bgm.start(in_browser=start_audio_mode == "display")
+
+    # The web display's /top switch moves the voice (mid-line) and the BGM the
+    # moment it flips; later lines just start on the new output.
+    live = _LiveVoice()
+    switch_task = (
+        asyncio.create_task(_follow_output_switch(display, live, bgm))
+        if _display_output_mode(display) is not None
+        else None
     )
 
-    bgm: BGMManager | None = None
-    if use_browser_bgm:
-        display.set_bgm(bgm_path, volume=0.18)
-    else:
-        bgm = BGMManager(
-            bgm_path,
-            normal_volume=0.40,
-            speaking_volume=0.18,
-        )
-        await bgm.intro()
-        # 会話パート全体ではBGMを低く固定する
-        await bgm.fade_to(bgm.speaking_volume, duration=0.8)
+    async def _stop_following_switch() -> None:
+        if switch_task is not None and not switch_task.done():
+            switch_task.cancel()
+            try:
+                await switch_task
+            except asyncio.CancelledError:
+                pass
 
     window_stop = asyncio.Event()
     window_task = None
@@ -700,13 +1026,8 @@ async def run_playback_with_connected_robots(
                 f"robots={_robot_diag(robot_a, robot_b, robot_c)}"
             )
 
-            turn_audio_mode: AudioMode = audio_mode
-            if (
-                display is not None
-                and getattr(display, "plays_speech_audio", False)
-                and audio_mode in ("computer", "surround")
-            ):
-                turn_audio_mode = "display"
+            # Read per turn so the /top voice-output switch lands on the next line.
+            turn_audio_mode = _turn_audio_mode(audio_mode, display)
 
             # The subtitle + speech audio are fired INSIDE _play_turn, after the
             # speaker's head is fully raised, so the voice and sway start
@@ -727,6 +1048,7 @@ async def run_playback_with_connected_robots(
                 role=role,
                 text=transcript,
                 turn_number=turn.get("turn"),
+                live=live,
             )
             _diag(
                 f"turn_play_done turn={turn['turn']} role={role} "
@@ -747,16 +1069,16 @@ async def run_playback_with_connected_robots(
 
         # Natural end of the discussion: fade the BGM out gently. (The finally
         # below still hard-stops as a safety net for Ctrl+C / exceptions.)
-        if bgm is not None:
-            await bgm.stop()
-        elif use_browser_bgm and display is not None:
-            try:
-                display.stop_bgm()
-            except Exception:
-                pass
+        # Stop following the switch first so it cannot restart the BGM.
+        await _stop_following_switch()
+        await bgm.stop()
 
     finally:
         _diag(f"playback_cleanup session={session_name}")
+        # Cancel without awaiting first: under STOP this task is itself being
+        # cancelled, and the follower must not outlive the discussion.
+        if switch_task is not None:
+            switch_task.cancel()
         if ui is not None:
             window_stop.set()
 
@@ -764,13 +1086,7 @@ async def run_playback_with_connected_robots(
                 await window_task
 
         # Synchronous hard stop so Ctrl+C teardown cannot leave the BGM playing.
-        if bgm is not None:
-            bgm.hard_stop()
-        elif use_browser_bgm and display is not None:
-            try:
-                display.stop_bgm()
-            except Exception:
-                pass
+        bgm.hard_stop()
 
 async def run_playback(
     config: Config,
@@ -845,6 +1161,8 @@ async def run_playback(
         robot_c.wiggle_antennas()
 
         await asyncio.sleep(2)
+
+        await _preload_robot_audio(robots, turns, output_dir, audio_mode)
 
         print("\nStarting playback!\n")
 

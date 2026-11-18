@@ -209,6 +209,46 @@ function connectWS(role, onMessage) {
 """
 
 
+_WAKE_JS = r"""
+// Keep the screen awake while a display page is open, like YouTube does.
+// The Screen Wake Lock API only exists in secure contexts (https / localhost),
+// so a LAN http:// page falls back to a tiny muted looping video: Chrome holds
+// a wake lock for any visible playing video. It is drawn from a canvas, so no
+// media file is needed, and kept 2px / near-transparent but "visible".
+(function () {
+  let lock = null;
+  async function requestLock() {
+    if (lock || document.visibilityState !== 'visible') return;
+    try {
+      lock = await navigator.wakeLock.request('screen');
+      lock.addEventListener('release', () => { lock = null; });
+    } catch (e) { lock = null; }
+  }
+  if ('wakeLock' in navigator) {
+    requestLock();
+    document.addEventListener('visibilitychange', requestLock);
+    document.addEventListener('pointerdown', requestLock);
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 2;
+  const ctx = canvas.getContext('2d');
+  let tick = 0;
+  setInterval(() => { ctx.fillStyle = (tick++ & 1) ? '#000' : '#010101'; ctx.fillRect(0, 0, 2, 2); }, 1000);
+  const v = document.createElement('video');
+  v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', '');
+  v.srcObject = canvas.captureStream(1);
+  v.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:2147483647';
+  function keep() { if (v.paused) v.play().catch(() => {}); }
+  function mount() { document.body.appendChild(v); keep(); }
+  if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+  document.addEventListener('visibilitychange', keep);
+  document.addEventListener('pointerdown', keep);
+  setInterval(keep, 15000);
+})();
+"""
+
+
 # ── Top page ─────────────────────────────────────────────────────────────────
 
 def page_top() -> str:
@@ -217,6 +257,7 @@ def page_top() -> str:
     html = html.replace("/*THEME_VARS*/", _theme_vars())
     html = html.replace("/*GAZE_JS*/", _GAZE_JS)
     html = html.replace("/*WS_JS*/", _WS_JS)
+    html = html.replace("/*WAKE_JS*/", _WAKE_JS)
     html = html.replace("/*CONFIG*/", cfg)
     return html
 
@@ -285,6 +326,61 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #000;
   align-items: center; justify-content: center; cursor: pointer;
   background: rgba(0,0,0,0.72); color: #fff; font-size: 3vw; font-weight: 800;
   text-align: center; padding: 4vw; }
+
+/* ── Transport (volume / voice output / PLAY / STOP / loop mode) ───────────
+   The buttons live on this page, not on a separate operator page, because a
+   browser only unlocks audio for the document that received the click -- and
+   this document is the one that plays the video, the voices and the BGM. */
+#transport { position: fixed; left: 50%; bottom: 3.2vmin; z-index: 60;
+  transform: translateX(-50%); display: flex; align-items: center; gap: 1.2vmin;
+  /* left:50% caps a shrink-to-fit box at half the screen; size to the
+     controls instead so the labels never wrap. */
+  width: max-content; max-width: 96vw; white-space: nowrap;
+  padding: 1.0vmin 1.4vmin; border-radius: 999px;
+  background: rgba(18,34,58,0.84); box-shadow: 0 0.6vmin 2.4vmin rgba(18,34,58,0.30);
+  opacity: 1; transition: opacity .45s ease; }
+#transport.idle { opacity: 0; pointer-events: none; }
+/* The pointer goes away with the controls: an abandoned cursor over the stage
+   is the one thing that gives away that this is a web page. */
+body.hide-cursor, body.hide-cursor * { cursor: none; }
+#transport button { display: flex; align-items: center; justify-content: center;
+  gap: 0.6em; border: 0; border-radius: 999px; cursor: pointer; padding: 0.6em 1.4em;
+  font-family: var(--font); font-size: clamp(12px, 1.6vmin, 28px); font-weight: 800;
+  letter-spacing: 0.08em; color: #fff; background: rgba(255,255,255,0.14);
+  transition: background .2s ease, transform .12s ease, opacity .2s ease; }
+#transport button:hover:not(:disabled) { background: rgba(255,255,255,0.26); }
+#transport button:active:not(:disabled) { transform: scale(0.96); }
+#transport button:disabled { opacity: 0.34; cursor: default; }
+#transport #btn-play:not(:disabled) { background: var(--accent); }
+#transport svg { width: 1.25em; height: 1.25em; flex: 0 0 auto; }
+/* Loop mode. Like a music player: one button cycling through the modes, its
+   label saying which one is live. */
+#btn-loop { min-width: 9.5em; }
+#btn-loop.mode-shuffle { background: rgba(255,255,255,0.30); }
+#btn-loop.mode-one { background: var(--accent-glow); color: var(--ink); }
+/* Volume belongs to this screen, not to the show: the browser makes the sound,
+   so the level is stored here and survives a restart. */
+#volume-wrap { display: flex; align-items: center; gap: 0.7em; padding: 0 1.0em 0 1.2em;
+  color: #fff; font-size: clamp(12px, 1.6vmin, 28px); }
+#volume { -webkit-appearance: none; appearance: none; width: clamp(70px, 9vmin, 170px);
+  height: 0.42em; border-radius: 999px; background: rgba(255,255,255,0.26);
+  outline: none; cursor: pointer; }
+#volume::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+  width: 1.15em; height: 1.15em; border-radius: 50%; background: #fff; border: 0;
+  box-shadow: 0 0 0.5vmin rgba(0,0,0,0.35); }
+#volume::-moz-range-thumb { width: 1.15em; height: 1.15em; border-radius: 50%;
+  background: #fff; border: 0; }
+/* Dimmed at zero volume, and while SPACE has muted the browser. */
+#volume-wrap.muted { opacity: 0.5; }
+/* Voice output: the robots' own speakers or this browser. A two-way switch
+   with both choices in view, so which one is live is never a guess. The
+   video's sound stays in the browser either way. */
+#output-seg { display: flex; align-items: center; gap: 0.3vmin; padding: 0.4vmin;
+  border-radius: 999px; background: rgba(255,255,255,0.08); }
+#transport #output-seg button { padding: 0.45em 1.1em; background: transparent;
+  color: rgba(255,255,255,0.72); }
+#transport #output-seg button:hover { background: rgba(255,255,255,0.16); }
+#transport #output-seg button.on { background: #fff; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -301,7 +397,50 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #000;
     <canvas id="gaze"></canvas>
   </div>
 
+  <div id="transport">
+    <div id="volume-wrap">
+      <svg id="vol-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+        <path id="vol-wave1" d="M15.5 8.5a4.5 4.5 0 010 7" fill="none"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path id="vol-wave2" d="M18.5 5.5a8.5 8.5 0 010 13" fill="none"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <input id="volume" type="range" min="0" max="100" step="1" value="100"
+             aria-label="Volume">
+    </div>
+    <div id="output-seg" role="radiogroup" aria-label="Voice output"
+         title="声の出力先 / Voice output">
+      <button type="button" role="radio" data-output="robot" aria-checked="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4.5" y="8" width="15" height="11" rx="3.5"/>
+          <path d="M12 8V4.6"/><circle cx="12" cy="3.6" r="1"/>
+          <circle cx="9.3" cy="13.5" r="0.9" fill="currentColor"/>
+          <circle cx="14.7" cy="13.5" r="0.9" fill="currentColor"/>
+        </svg>
+        ROBOT
+      </button>
+      <button type="button" role="radio" data-output="browser" aria-checked="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>
+        </svg>
+        BROWSER
+      </button>
+    </div>
+    <button id="btn-play" type="button">▶ PLAY</button>
+    <button id="btn-stop" type="button">■ STOP</button>
+    <button id="btn-loop" type="button" title="Loop mode">
+      <svg id="loop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true"></svg>
+      <span id="loop-label">ALL</span>
+    </button>
+  </div>
+
 <script>/*WS_JS*/</script>
+<script>/*WAKE_JS*/</script>
 <script>/*GAZE_JS*/</script>
 <script>
 const CFG = /*CONFIG*/;
@@ -311,6 +450,14 @@ const vid = document.getElementById('vid');
 const speechAudio = document.getElementById('speech-audio');
 const bgmAudio = document.getElementById('bgm');
 let curBgmSrc = '';
+// Master level from the transport slider; scales speech, BGM and the video.
+let masterVolume = 1.0;
+// SPACE mute (server state). Shown by dimming the volume control.
+let isMuted = false;
+// Voice output from the server: 'robot' speakers or this 'browser'.
+let audioOutput = null;
+let speechMasterGain = null;
+let playing = false;
 // BGM fades in when a discussion starts and out when it ends, so it never
 // snaps on/off. The steady-state volume comes from the server (bgmVolume).
 let bgmTargetVolume = 0.18;
@@ -339,9 +486,11 @@ function fadeBgm(to, ms, onDone) {
 // All exhibit audio lives in the browser, so muting just gates these elements.
 function applyMute(s) {
   if (typeof s.muted !== 'boolean') return;
+  isMuted = s.muted;
   speechAudio.muted = s.muted;
   bgmAudio.muted = s.muted;
   vid.muted = s.muted;
+  volumeWrap.classList.toggle('muted', isMuted || masterVolume === 0);
 }
 // BGM is mono/centered: the <audio> element plays straight to the output with
 // equal L/R, so it does not follow the per-speaker speech panning.
@@ -352,6 +501,7 @@ function tryPlayBgm() {
     console.warn('[top] bgm blocked — click display once:', e && e.name);
   });
 }
+function bgmLevel() { return clamp01(bgmTargetVolume * masterVolume); }
 function applyBgm(s) {
   if (typeof s.bgmVolume === 'number') bgmTargetVolume = clamp01(s.bgmVolume);
   if (s.bgmSrc && s.bgmSrc !== curBgmSrc) {
@@ -362,7 +512,7 @@ function applyBgm(s) {
     bgmAudio.volume = 0;
     bgmAudio.load();
     tryPlayBgm();
-    fadeBgm(bgmTargetVolume, BGM_FADE_IN_MS);
+    fadeBgm(bgmLevel(), BGM_FADE_IN_MS);
   } else if (!s.bgmSrc && curBgmSrc) {
     // Track removed: fade out, then release the element.
     curBgmSrc = '';
@@ -371,7 +521,7 @@ function applyBgm(s) {
     });
   } else if (s.bgmSrc && bgmFadeTimer === null) {
     // Same track, a volume update arrived outside a fade — apply it directly.
-    bgmAudio.volume = bgmTargetVolume;
+    bgmAudio.volume = bgmLevel();
   }
 }
 const fadeCurtain = document.getElementById('fade-curtain');
@@ -426,7 +576,7 @@ vid.addEventListener('playing', () => { startov.style.display = 'none'; });
 function tryPlay() {
   vid.playsInline = true;
   vid.muted = false;
-  vid.volume = 1.0;
+  vid.volume = masterVolume;
   const pr = vid.play();
   if (pr && pr.catch) pr.catch((e) => {
     console.warn('[top] autoplay blocked — click to start with sound:', e && e.name);
@@ -436,25 +586,30 @@ function tryPlay() {
 function tryPlaySpeech() {
   ensureSpeechPanner();
   if (speechAudioCtx && speechAudioCtx.state === 'suspended') speechAudioCtx.resume();
-  speechAudio.volume = 1.0;
+  speechAudio.volume = speechMasterGain ? 1.0 : masterVolume;
   const pr = speechAudio.play();
   if (pr && pr.catch) pr.catch((e) => {
     console.warn('[top] speech audio blocked — click display once:', e && e.name);
     startov.style.display = 'flex';
   });
 }
+// The graph: source -> panner -> master gain -> speakers. The panner puts each
+// robot's voice where that robot stands; the master gain is the volume slider.
 function ensureSpeechPanner() {
-  if (speechPanner || !window.AudioContext && !window.webkitAudioContext) return;
+  if (speechAudioCtx || !window.AudioContext && !window.webkitAudioContext) return;
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   speechAudioCtx = new AudioCtx();
   speechSource = speechAudioCtx.createMediaElementSource(speechAudio);
+  speechMasterGain = speechAudioCtx.createGain();
+  speechMasterGain.gain.value = masterVolume;
   if (speechAudioCtx.createStereoPanner) {
     speechPanner = speechAudioCtx.createStereoPanner();
-    speechSource.connect(speechPanner).connect(speechAudioCtx.destination);
+    speechSource.connect(speechPanner).connect(speechMasterGain);
   } else {
     speechPanner = null;
-    speechSource.connect(speechAudioCtx.destination);
+    speechSource.connect(speechMasterGain);
   }
+  speechMasterGain.connect(speechAudioCtx.destination);
 }
 function setSpeechPan(v) {
   ensureSpeechPanner();
@@ -507,13 +662,17 @@ function transitionTo(mode) {
 // Any user interaction also kicks playback (covers autoplay-blocked kiosks).
 startov.addEventListener('click', () => { startov.style.display = 'none'; tryPlay(); tryPlayBgm(); });
 document.addEventListener('pointerdown', () => {
+  unlockAudio();
   retryPlayIfVisible();
   tryPlayBgm();
   // Do NOT (re)start speech while a video is showing. The speech element still
   // holds the PREVIOUS turn's clip, so a click during the video would replay
   // the old robot voice mixed into the video audio. Only start speech when a
-  // discussion (non-video) is on screen.
-  if (speechAudio.src && speechAudio.paused && visibleMode !== 'video') tryPlaySpeech();
+  // discussion (non-video) is on screen. Likewise never restart a line that
+  // already played to its end (a click on the transport between lines), and
+  // never while the robots are the voice output.
+  if (playing && audioOutput === 'browser' && speechAudio.src && speechAudio.paused
+      && !speechAudio.ended && visibleMode !== 'video') tryPlaySpeech();
 }, true);
 window.addEventListener('focus', retryPlayIfVisible);
 document.addEventListener('visibilitychange', retryPlayIfVisible);
@@ -573,15 +732,27 @@ function stopAllMedia() {
 }
 
 function render(s) {
-  console.log('[top] state', s.mode, 'src', s.videoSrc, 'epoch', s.videoEpoch, 'muted', s.muted);
+  console.log('[top] state', s.mode, 'src', s.videoSrc, 'epoch', s.videoEpoch, 'muted', s.muted, 'transport', s.transport);
+  applyTransport(s.transport || 'stopped');
+  applyLoopMode(s.loopMode || 'sequential');
+  applyOutput(s.audioOutput || 'browser');
   applyBgm(s);
   applyMute(s);
   show(s.mode);
+  // (A STOP on the server drops the video mode and the speech clip before it
+  // broadcasts, so a page arriving while stopped never resumes either.)
   if (s.speechAudioSrc && s.speechAudioEpoch !== curSpeechEpoch) {
     curSpeechEpoch = s.speechAudioEpoch;
     setSpeechPan(s.speechPan || 0);
     speechAudio.src = s.speechAudioSrc;
     speechAudio.load();
+    // A line moved here from a robot mid-way resumes where it had got to.
+    const offset = Number(s.speechOffset) || 0;
+    if (offset > 0) {
+      const seek = () => { try { speechAudio.currentTime = offset; } catch (e) {} };
+      if (speechAudio.readyState >= 1) seek();
+      else speechAudio.addEventListener('loadedmetadata', seek, { once: true });
+    }
     tryPlaySpeech();
   }
   if (s.mode === 'video') {
@@ -605,6 +776,160 @@ function render(s) {
   // the mini displays so the large screen stays calm.
   gaze.stop();
 }
+
+// ── Transport ─────────────────────────────────────────────────────────────
+const transport = document.getElementById('transport');
+const btnPlay = document.getElementById('btn-play');
+const btnStop = document.getElementById('btn-stop');
+const btnLoop = document.getElementById('btn-loop');
+const loopIcon = document.getElementById('loop-icon');
+const loopLabel = document.getElementById('loop-label');
+const outputBtns = document.querySelectorAll('#output-seg button[data-output]');
+const volume = document.getElementById('volume');
+const volumeWrap = document.getElementById('volume-wrap');
+const volWave1 = document.getElementById('vol-wave1');
+const volWave2 = document.getElementById('vol-wave2');
+
+// ── Volume (page-local: this browser makes the sound) ─────────────────────
+const VOLUME_KEY = 'ethics.top.volume';
+
+function applyVolume(v) {
+  masterVolume = clamp01(Number(v));
+  if (speechMasterGain) speechMasterGain.gain.value = masterVolume;
+  else speechAudio.volume = masterVolume;
+  vid.volume = masterVolume;
+  if (bgmFadeTimer === null && curBgmSrc) bgmAudio.volume = bgmLevel();
+
+  volume.value = Math.round(masterVolume * 100);
+  volumeWrap.classList.toggle('muted', isMuted || masterVolume === 0);
+  // The waves drop away as the level falls, so the icon reads at a glance.
+  volWave1.style.opacity = masterVolume > 0.02 ? '1' : '0';
+  volWave2.style.opacity = masterVolume > 0.55 ? '1' : '0';
+}
+
+// Restore the level before anything can play: the page reloads on every
+// server restart, and resetting the volume each time would be miserable.
+(function restoreVolume() {
+  let stored = null;
+  try { stored = localStorage.getItem(VOLUME_KEY); } catch (e) {}
+  const v = stored === null ? 1 : parseFloat(stored);
+  applyVolume(Number.isFinite(v) ? v : 1);
+})();
+// Follow the slider live; persist once the drag ends.
+volume.addEventListener('input', () => applyVolume(volume.value / 100));
+volume.addEventListener('change', () => {
+  try { localStorage.setItem(VOLUME_KEY, String(masterVolume)); } catch (e) {}
+});
+
+// ── Loop mode ─────────────────────────────────────────────────────────────
+const LOOP_ICONS = {
+  sequential:
+    '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+    '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  shuffle:
+    '<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>' +
+    '<polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>' +
+    '<line x1="4" y1="4" x2="9" y2="9"/>',
+  one:
+    '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+    '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>' +
+    '<path d="M10.6 10.9 12.4 9.7v4.9"/>',
+};
+const LOOP_LABELS = { sequential: 'ALL', shuffle: 'SHUFFLE', one: 'ONE' };
+let loopMode = null;
+
+function applyLoopMode(mode) {
+  if (mode === loopMode) return;
+  loopMode = mode;
+  loopIcon.innerHTML = LOOP_ICONS[mode] || LOOP_ICONS.sequential;
+  loopLabel.textContent = LOOP_LABELS[mode] || mode;
+  btnLoop.classList.remove('mode-sequential', 'mode-shuffle', 'mode-one');
+  btnLoop.classList.add('mode-' + mode);
+}
+btnLoop.addEventListener('click', () => conn.send({ type: 'cycle_loop' }));
+
+// ── Voice output (ROBOT / BROWSER) ────────────────────────────────────────
+// Held on the server like the loop mode, so every display agrees. It takes
+// effect at once: the line being spoken moves over mid-way, BGM included.
+function applyOutput(out) {
+  if (out === audioOutput) return;
+  // Switched to the robots: the voice leaves this browser at once (the server
+  // carries on the rest of the line on the robot).
+  if (audioOutput !== null && out === 'robot') {
+    try { speechAudio.pause(); } catch (e) {}
+  }
+  audioOutput = out;
+  for (const b of outputBtns) {
+    const on = b.dataset.output === out;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+}
+for (const b of outputBtns) {
+  b.addEventListener('click', () => conn.send({ type: 'set_output', output: b.dataset.output }));
+}
+
+// ── PLAY / STOP ───────────────────────────────────────────────────────────
+let hideTimer = null;
+let audioUnlocked = false;
+
+// Browsers only let a page make sound after a user gesture on it. Run this
+// inside the gesture (the PLAY click, any pointerdown) so the AudioContext is
+// created or resumed while the gesture is live.
+function unlockAudio() {
+  ensureSpeechPanner();
+  if (speechAudioCtx && speechAudioCtx.state === 'suspended') speechAudioCtx.resume();
+}
+
+btnPlay.addEventListener('click', () => {
+  // This click is the user gesture that unlocks the video, voices and BGM.
+  unlockAudio();
+  audioUnlocked = true;
+  startov.style.display = 'none';
+  btnPlay.disabled = playing;
+  conn.send({ type: 'play' });
+});
+btnStop.addEventListener('click', () => conn.send({ type: 'stop' }));
+
+// Video-player behaviour: visible while stopped (there is nothing else to look
+// at, and the operator needs to find PLAY), fading away during the show unless
+// someone is actually using the screen.
+function nudgeControls() {
+  transport.classList.remove('idle');
+  document.body.classList.remove('hide-cursor');
+  if (hideTimer) clearTimeout(hideTimer);
+  if (!playing) return;   // stopped: leave them up so PLAY can be found
+  hideTimer = setTimeout(() => {
+    transport.classList.add('idle');
+    document.body.classList.add('hide-cursor');
+  }, 3000);
+}
+for (const evt of ['pointermove', 'pointerdown', 'keydown']) {
+  document.addEventListener(evt, nudgeControls);
+}
+
+function applyTransport(state) {
+  const wasPlaying = playing;
+  playing = state === 'playing';
+  // PLAY stays clickable until this page has actually been allowed to make a
+  // sound. Reloading mid-show gives a page that believes it is playing but has
+  // never had a user gesture, so its audio is blocked; greying PLAY out would
+  // strand the operator with a silent screen.
+  btnPlay.disabled = playing && audioUnlocked;
+  btnStop.disabled = !playing;
+
+  if (!playing && wasPlaying) {
+    // STOP: silence the voice and freeze the video at once. The BGM fades out
+    // when the server drops it and the attract card follows.
+    try { speechAudio.pause(); } catch (e) {}
+    wantVideoPlaying = false;
+    try { vid.pause(); } catch (e) {}
+  }
+  // Only on an actual transport change: render() runs on every state message.
+  if (playing !== wasPlaying) nudgeControls();
+}
+// Reflect the stopped state immediately, before the first server message.
+applyTransport('stopped');
 
 const conn = connectWS('top', (msg) => {
   if (msg.type === 'control' && msg.action === 'stop') {
@@ -662,6 +987,7 @@ def page_mini(role: str) -> str:
     html = html.replace("/*THEME_VARS*/", _theme_vars())
     html = html.replace("/*GAZE_JS*/", _GAZE_JS)
     html = html.replace("/*WS_JS*/", _WS_JS)
+    html = html.replace("/*WAKE_JS*/", _WAKE_JS)
     html = html.replace("/*CONFIG*/", cfg)
     html = html.replace("__ROLE__", role)
     return html
@@ -749,6 +1075,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; cursor: auto;
   </div>
 
 <script>/*WS_JS*/</script>
+<script>/*WAKE_JS*/</script>
 <script>/*GAZE_JS*/</script>
 <script>
 const CFG = /*CONFIG*/;

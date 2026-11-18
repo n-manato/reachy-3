@@ -1,0 +1,21 @@
+# systemd *user* unit: runs the Multi-Display Exhibit resident (no menu).
+# Install with scripts/install_service.sh. The loop waits for PLAY on
+# http://<this-pc>:${DISPLAY_WEB_PORT}/top, exactly like menu 2 → Multi-Display.
+[Unit]
+Description=Ethics Podcast exhibit (Reachy Mini x3, web displays)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/DEV/Reachy_3
+ExecStart=%h/.local/bin/uv run --no-sync ethics-podcast --exhibit
+Environment=PYTHONUNBUFFERED=1
+# SIGINT → KeyboardInterrupt, so BGM / robot workers are cleaned up on stop.
+KillSignal=SIGINT
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

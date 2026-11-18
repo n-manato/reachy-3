@@ -829,7 +829,9 @@ def _pick_session(action: str = "use") -> str | None:
         print(f"    {len(names) + 1}. Video Discussion Loop")
         print("       Play each video, then let the three robots discuss it.")
         print(f"    {len(names) + 2}. Multi-Display Exhibit")
-        print("       Same loop across 4 screens (big top + 3 mini under robots).")
+        print("       Same loop across 4 screens (big top + 3 mini under robots);")
+        print("       PLAY / STOP / loop / volume / voice output (ROBOT or BROWSER)")
+        print("       buttons live on the /top page.")
 
     if action == "play" and generated:
         print("    a. Play ALL generated sessions in sequence")
@@ -864,6 +866,49 @@ def _pick_session(action: str = "use") -> str | None:
     return None
 
 
+# ── Resident exhibit mode ──────────────────────────────────────────────────
+
+def _run_exhibit(config: Config) -> None:
+    """Run the Multi-Display Exhibit with no console menu (systemd service).
+
+    Same as menu 2 → Multi-Display Exhibit, but the audio mode comes from
+    EXHIBIT_AUDIO_MODE (default: robot) instead of a prompt; on the web
+    display it is only the start value of the /top ROBOT / BROWSER voice
+    switch. The loop still waits for PLAY on the /top page. If it exits or
+    crashes, the process exits non-zero so systemd restarts it.
+    """
+    from ethics_podcast.multi_video_discussion import run_multi_display_discussion_loop
+
+    audio_mode = os.getenv("EXHIBIT_AUDIO_MODE", "robot").strip() or "robot"
+    if audio_mode not in ("robot", "computer", "surround", "hybrid_surround"):
+        logging.warning("Unknown EXHIBIT_AUDIO_MODE=%r; using robot.", audio_mode)
+        audio_mode = "robot"
+    _print_audio_mode(audio_mode)
+
+    hybrid = audio_mode == "hybrid_surround"
+    try:
+        asyncio.run(
+            run_multi_display_discussion_loop(
+                _web_display_config(config),
+                audio_mode=audio_mode,
+                tv_audio_delay=config.tv_audio_delay if hybrid else 0.0,
+                robot_audio_delay=config.robot_audio_delay if hybrid else 0.0,
+            )
+        )
+    except KeyboardInterrupt:
+        _emergency_cleanup()
+        return
+    except Exception as e:
+        logging.error("Exhibit loop failed: %s", e, exc_info=True)
+        _emergency_cleanup()
+        sys.exit(1)
+
+    # The loop only returns on its own when nothing is playable; let systemd
+    # retry later (e.g. after videos/discussions are added).
+    _emergency_cleanup()
+    sys.exit(1)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -879,6 +924,10 @@ def main() -> None:
     except ValueError as e:
         logging.error("Configuration error: %s", e)
         sys.exit(1)
+
+    if "--exhibit" in sys.argv[1:]:
+        _run_exhibit(config)
+        return
 
     wake_proc = None
 

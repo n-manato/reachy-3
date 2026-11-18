@@ -76,6 +76,9 @@ class Config:
     # Host/port for the "web" backend. 0.0.0.0 = reachable from any LAN device.
     display_web_host: str = "0.0.0.0"
     display_web_port: int = 8000
+    # Order of the multi-display exhibit loop: "sequential" | "shuffle" | "one".
+    # The loop button on the /top page cycles it live; this is the start value.
+    loop_mode: str = "sequential"
 
     # Internal roles, in fixed left→center→right order.
     ROLE_ORDER = ("student", "professor", "moderator")
@@ -145,6 +148,7 @@ class Config:
             display_backend=os.environ.get("DISPLAY_BACKEND", "qt").strip().lower(),
             display_web_host=os.environ.get("DISPLAY_WEB_HOST", "0.0.0.0"),
             display_web_port=int(os.environ.get("DISPLAY_WEB_PORT", "8000")),
+            loop_mode=normalize_loop_mode(os.environ.get("LOOP_MODE")),
         )
 
     # ── Robot-mode helpers ──────────────────────────────────────────────────
@@ -175,6 +179,35 @@ class Config:
 
 def _parse_bool(value: str) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+# Loop modes for the multi-display exhibit, in the order the /top page's loop
+# button cycles through them. "sequential" plays the videos in order (the
+# original behaviour), "shuffle" draws each round in a random order, "one"
+# repeats the current video.
+LOOP_MODES = ("sequential", "shuffle", "one")
+
+
+def normalize_loop_mode(value: str | None) -> str:
+    mode = (value or "").strip().lower()
+    return mode if mode in LOOP_MODES else LOOP_MODES[0]
+
+
+# Where the robots' voices come out in the web multi-display exhibit, picked
+# live on the /top page: the robots' own speakers, or the /top browser (the
+# same output as the video). The menu / EXHIBIT_AUDIO_MODE choice only sets
+# the start value.
+AUDIO_OUTPUTS = ("robot", "browser")
+
+
+def normalize_audio_output(value: str | None) -> str:
+    output = (value or "").strip().lower()
+    return output if output in AUDIO_OUTPUTS else AUDIO_OUTPUTS[0]
+
+
+def audio_output_for_mode(audio_mode: str) -> str:
+    """Start value of the /top voice-output switch for a configured audio mode."""
+    return "browser" if audio_mode in ("computer", "surround") else "robot"
 
 
 def _parse_robot_mode(value: str) -> int:

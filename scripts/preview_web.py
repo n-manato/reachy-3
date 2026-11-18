@@ -176,6 +176,9 @@ async def main() -> None:
     video_arg = video if (video and Path(video).exists()) else None
 
     display = WebDisplayManager(video_path=video_arg)
+    # The /top page only plays media while the transport is "playing". The
+    # preview drives the display directly, so press PLAY on its behalf.
+    display.request_play()
 
     print(f"  Session: {title}  ({len(turns)} turns)")
     print("  >>> Open one of the URLs above in a browser (e.g. /top or /all). <<<")

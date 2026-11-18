@@ -65,6 +65,19 @@ class MockRobot:
         # No robot speaker in demo mode; audio is played on the computer.
         pass
 
+    # RobotController's daemon-HTTP playback fallback; nothing to play here.
+    def preload_sound_files(self, paths) -> int:
+        return 0
+
+    def upload_sound_file(self, path) -> str | None:
+        return None
+
+    def play_sound_file(self, path) -> bool:
+        return False
+
+    def stop_sound(self, wait: float = 0.0) -> None:
+        pass
+
 
 def connect_mock_robots(
     role_names: tuple[str, str, str] = ("student", "professor", "moderator"),

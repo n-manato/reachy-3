@@ -18,13 +18,20 @@ import pickle
 import struct
 import subprocess
 import sys
+import threading
 import time
 import math
+import re
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import requests
 
 logger = logging.getLogger(__name__)
+
+# The Reachy Mini daemon's HTTP API port (same value as robot_worker.DAEMON_PORT).
+DAEMON_PORT = 8000
 
 OPENAI_SAMPLE_RATE = 24000
 
@@ -127,12 +134,24 @@ class RobotController:
         self._audio_ready = False
         self._restart_attempts = 0
         self._last_reported_exit_pid: int | None = None
+        # HTTP audio path: remote names of WAVs already uploaded to the daemon,
+        # and whether a play request went out that a STOP should cut short.
+        self._uploaded_sounds: set[str] = set()
+        self._sound_started = False
+        # Serialises the upload/play calls (they run on executor threads) so a
+        # STOP can wait for an in-flight one instead of racing its play POST.
+        self._http_lock = threading.Lock()
+        self._abort_http_audio = False
 
         self._last_pose_command: str | None = None
         self._last_pose_time: float = 0.0
 
     def start(self) -> None:
         """Launch the worker subprocess and wait for READY signal."""
+        # A restarted worker usually follows a Wi-Fi blip, not a robot reboot,
+        # so the daemon still has the uploaded files. Re-sync the cache against
+        # its listing so only files that are really gone get re-uploaded.
+        self._resync_uploaded_sounds()
         env = {**os.environ}
 
         worker_path = os.path.join(os.path.dirname(__file__), "robot_worker.py")
@@ -185,7 +204,14 @@ class RobotController:
         raise RuntimeError(f"Robot {self.role} failed to start. Got: {ready_line}")
 
     def stop(self) -> None:
-        """Shut down the subprocess."""
+        """Shut down the subprocess and silence any HTTP-triggered playback."""
+        self.stop_sound()
+        self._stop_worker()
+
+    def _stop_worker(self) -> None:
+        """Shut down the subprocess only. The daemon (and any line it is playing
+        through the HTTP path) is left alone: a worker restart is about the
+        motion link, not the speaker."""
         if self._process is None:
             return
 
@@ -231,7 +257,7 @@ class RobotController:
         logger.warning("Restarting robot %s worker...", self.role)
 
         try:
-            self.stop()
+            self._stop_worker()
         except Exception as e:
             logger.warning("Error while stopping robot %s worker: %s", self.role, e)
 
@@ -315,6 +341,142 @@ class RobotController:
     @property
     def audio_ready(self) -> bool:
         return self._audio_ready
+
+    # ── HTTP file playback (fallback when SDK audio is unavailable) ────────
+    #
+    # The SDK streams speaker audio over WebRTC, which needs the GStreamer
+    # ``webrtcsrc`` element (gst-plugins-rs) on the client PC. Where that is
+    # missing (e.g. Ubuntu 20.04 / GStreamer 1.16) the worker reports
+    # audio_ready=False. The daemon can still play a file uploaded to it over
+    # plain HTTP (POST /api/media/sounds/upload + /api/media/play_sound), and it
+    # does so through its own playbin, independent of the WebRTC pipeline, so
+    # this works even while our no_media worker holds the robot.
+    #
+    # Reference for the endpoints: the SDK's own client does the same three
+    # POSTs in reachy_mini/media/webrtc_client_gstreamer.py (upload_sound,
+    # play_sound, stop_playing) but cannot be constructed without webrtcsrc.
+
+    def _daemon_url(self, path: str) -> str:
+        return f"http://{self.host}:{DAEMON_PORT}{path}"
+
+    def _resync_uploaded_sounds(self) -> None:
+        """Drop cache entries the daemon no longer has (e.g. after a reboot)."""
+        if not self._uploaded_sounds:
+            return
+        try:
+            response = requests.get(self._daemon_url("/api/media/sounds"), timeout=3)
+            response.raise_for_status()
+            present = set(response.json().get("files", []))
+        except Exception:
+            present = set()
+        self._uploaded_sounds &= present
+
+    @staticmethod
+    def _remote_sound_name(path: Path) -> str:
+        # Namespace by session directory: every session has a turn_01_student.wav
+        # and the daemon's upload directory is flat.
+        return re.sub(r"[^A-Za-z0-9._-]", "_", f"{path.parent.name}__{path.name}")
+
+    def upload_sound_file(self, path: Path) -> str | None:
+        """Upload *path* to the daemon once. Returns the remote name, or None."""
+        path = Path(path)
+        name = self._remote_sound_name(path)
+
+        if name in self._uploaded_sounds:
+            return name
+
+        try:
+            with open(path, "rb") as fh:
+                response = requests.post(
+                    self._daemon_url("/api/media/sounds/upload"),
+                    files={"file": (name, fh, "audio/wav")},
+                    timeout=(3, 20),  # (connect, read): a robot off Wi-Fi fails fast
+                )
+            response.raise_for_status()
+        except Exception as e:
+            logger.warning(
+                "Robot %s: sound upload failed for %s: %s", self.role, path.name, e
+            )
+            return None
+
+        self._uploaded_sounds.add(name)
+        return name
+
+    def preload_sound_files(self, paths: list[Path]) -> int:
+        """Upload several WAVs ahead of playback. Returns how many are ready.
+
+        A ``stop_sound`` arriving mid-way makes this stop between files.
+        """
+        with self._http_lock:
+            self._abort_http_audio = False
+            ready = 0
+            for path in paths:
+                if self._abort_http_audio:
+                    break
+                if self.upload_sound_file(path) is not None:
+                    ready += 1
+            return ready
+
+    def play_sound_file(self, path: Path) -> bool:
+        """Play a WAV on the robot speaker through the daemon HTTP API."""
+        path = Path(path)
+
+        with self._http_lock:
+            self._abort_http_audio = False
+
+            for attempt in range(2):
+                name = self.upload_sound_file(path)
+                if name is None:
+                    return False
+
+                try:
+                    response = requests.post(
+                        self._daemon_url("/api/media/play_sound"),
+                        json={"file": name},
+                        timeout=(2, 3),
+                    )
+                    if response.ok:
+                        self._sound_started = True
+                        return True
+                    logger.warning(
+                        "Robot %s: play_sound %s -> HTTP %s",
+                        self.role, name, response.status_code,
+                    )
+                except Exception as e:
+                    logger.warning("Robot %s: play_sound %s failed: %s", self.role, name, e)
+
+                # Retry once with a fresh upload (e.g. daemon restarted between turns).
+                self._uploaded_sounds.discard(name)
+
+            return False
+
+    def stop_sound(self, wait: float = 0.0) -> None:
+        """Best-effort stop of HTTP-triggered playback (STOP / Ctrl+C mid-turn).
+
+        ``wait`` bounds how long to wait for an in-flight upload/play call to
+        finish first, so its play request cannot land after this stop. The
+        exhibit's STOP passes a generous value from a worker thread; the
+        synchronous teardown path passes 0 and does not wait.
+
+        Only sends when a play request actually went out, so the routine
+        worker teardown does not pay a request (or its timeout).
+        """
+        self._abort_http_audio = True  # a running preload stops between files
+        if wait > 0:
+            acquired = self._http_lock.acquire(timeout=wait)
+        else:
+            acquired = self._http_lock.acquire(blocking=False)
+        try:
+            if not self._sound_started:
+                return
+            self._sound_started = False
+            try:
+                requests.post(self._daemon_url("/api/media/stop_sound"), timeout=1.5)
+            except Exception:
+                pass
+        finally:
+            if acquired:
+                self._http_lock.release()
 
     # ── Audio ──────────────────────────────────────────────────────────────
 

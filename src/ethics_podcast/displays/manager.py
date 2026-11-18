@@ -172,6 +172,8 @@ class DisplayManager:
         text: str,
         turn_number: int | None = None,
         audio_path: str | Path | None = None,
+        # Parity with WebDisplayManager; these windows never play the voice.
+        speech_audio: bool | None = None,
     ) -> None:
         """A robot starts speaking: subtitle on its mini, others dim."""
         self.top.set_current_speaker(role)

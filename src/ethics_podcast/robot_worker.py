@@ -135,6 +135,69 @@ BACKEND_READY_TIMEOUT = 60.0      # wait this long for the backend to rebuild
 WAKE_SETTLE_SECONDS = 3.0         # let the wake-up emote finish before connecting
 
 
+SIGNALLING_PORT = 8443            # daemon WebRTC signalling (SDK media path)
+SIGNALLING_WAIT_SECONDS = 5.0
+
+
+def _sdk_media_available(host: str, log: "logging.Logger") -> bool:
+    """Can the SDK's WebRTC audio path work from this PC to this robot?
+
+    Two things must hold, and both are checked up front so the worker never
+    dies inside ``ReachyMini(media_backend="default")``:
+
+    1. GStreamer on this PC has the ``webrtcsrc`` element (gst-plugins-rs).
+       Ubuntu 20.04 / GStreamer 1.16 does not ship it.
+    2. The daemon's media is acquired and its signalling server answers. A
+       previous no_media session makes the SDK *release* the daemon's media,
+       which stops the signalling server, so re-acquire it here first.
+
+    When this returns False the worker connects with no_media and the player
+    falls back to the daemon HTTP playback (RobotController.play_sound_file).
+    """
+    try:
+        import gi
+
+        gi.require_version("Gst", "1.0")
+        from gi.repository import Gst
+
+        Gst.init(None)
+        if Gst.ElementFactory.find("webrtcsrc") is None:
+            log.warning(
+                "GStreamer %s on this PC has no webrtcsrc element; SDK audio "
+                "streaming is unavailable. Speech will use the daemon HTTP "
+                "playback fallback.",
+                Gst.version_string(),
+            )
+            return False
+    except Exception as e:
+        log.warning("GStreamer is not usable here (%s); using the HTTP playback fallback.", e)
+        return False
+
+    import socket
+
+    import requests
+
+    try:
+        requests.post(f"http://{host}:{DAEMON_PORT}/api/media/acquire", timeout=5)
+    except Exception as e:
+        log.warning("Could not re-acquire daemon media (%s).", e)
+
+    deadline = time.monotonic() + SIGNALLING_WAIT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, SIGNALLING_PORT), timeout=1.0):
+                return True
+        except OSError:
+            time.sleep(0.5)
+
+    log.warning(
+        "Daemon WebRTC signalling (%s:%d) is not answering; SDK audio streaming "
+        "is unavailable. Speech will use the daemon HTTP playback fallback.",
+        host, SIGNALLING_PORT,
+    )
+    return False
+
+
 def _full_reset_and_wake(host: str, log: "logging.Logger") -> None:
     """Force a clean robot backend before the worker connects.
 
@@ -261,7 +324,7 @@ def main() -> None:
     kwargs: dict[str, Any] = {
         "host": host,
         "connection_mode": "network",
-        "media_backend": "default" if use_media else "no_media",
+        "media_backend": "no_media",
     }
 
     if robot_name:
@@ -274,14 +337,32 @@ def main() -> None:
         log.info("Performing full robot reset before connecting...")
         _full_reset_and_wake(host, log)
 
+    # Only ask the SDK for its media path when it can actually work from here;
+    # otherwise the player uses the daemon HTTP playback for speech.
+    sdk_media = use_media and _sdk_media_available(host, log)
+    if sdk_media:
+        kwargs["media_backend"] = "default"
+
     log.info("Connecting to %s at %s...", robot_name or "auto", host)
 
-    robot = ReachyMini(**kwargs)
+    try:
+        robot = ReachyMini(**kwargs)
+    except Exception as e:
+        if not sdk_media:
+            raise
+        log.warning(
+            "SDK media initialisation failed (%s); reconnecting without media. "
+            "Speech will use the daemon HTTP playback fallback.",
+            e,
+        )
+        sdk_media = False
+        kwargs["media_backend"] = "no_media"
+        robot = ReachyMini(**kwargs)
 
     audio_ready = False
     output_rate = 16000
 
-    if use_media:
+    if sdk_media:
         try:
             if hasattr(robot, "media") and robot.media is not None:
                 robot.media.start_playing()
@@ -298,6 +379,8 @@ def main() -> None:
         except Exception as e:
             audio_ready = False
             log.error("Audio playback initialization failed: %s", e)
+    elif use_media:
+        log.info("SDK media unavailable; speech goes through the daemon HTTP playback.")
     else:
         log.info("Media disabled by audio mode.")
 

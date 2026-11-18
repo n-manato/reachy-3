@@ -5,7 +5,7 @@ description = "Ethics Podcast: Two Reachy Mini robots have an autonomous convers
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "reachy-mini==1.8.4",
+    "reachy-mini==1.9.0",
     "reachy-mini-dances-library",
     "openai>=2.28.0",
     "httpx>=0.27",
@@ -19,7 +19,11 @@ dependencies = [
     "pycairo ; sys_platform == 'linux'",
     "pygobject ; sys_platform == 'linux'",
     # UI for the multi-display exhibit + legacy video window.
-    "PySide6",
+    # PySide6 >= 6.10 publishes manylinux_2_34 wheels only; the exhibit PC is
+    # Ubuntu 20.04 (glibc 2.31), so cap it there. Windows/macOS stay latest.
+    # Only the Qt display backend imports it -- the web backend does not.
+    "PySide6 ; sys_platform != 'linux'",
+    "PySide6<6.10 ; sys_platform == 'linux'",
     "python-vlc",
     "pygame",
     # Browser-based exhibit UI (DISPLAY_BACKEND=web): serves display pages over
@@ -50,7 +54,7 @@ packages = ["src/ethics_podcast"]
 # Lock resolution is pinned to the platform where this lock was generated.
 # To run on a different OS, edit this list (or delete `uv.lock`) and run
 # `uv lock` on the target machine. See README for cross-platform setup.
-environments = ["sys_platform == 'win32'"]
+environments = ["sys_platform == 'linux'"]
 
 # reachy-mini bundles gstreamer-msvc-runtime for Windows but it has no
 # wheels for macOS/Linux. Override to scope it to Windows only — macOS

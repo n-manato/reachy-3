@@ -17,3 +17,6 @@ wheels/
 
 # Generated speech-audio cache (web display transcodes WAV->MP3 on demand)
 output/**/*.mp3
+
+# local backups of .env (contain real keys)
+.env.bak*

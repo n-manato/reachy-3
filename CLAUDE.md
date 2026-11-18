@@ -38,12 +38,19 @@ text injection between sessions, no VAD). It is kept but not the main exhibit pa
   `prompts.py` (`BENTHAM_PROMPT` etc. + `SESSIONS`) for the live/script path, and
   rich `PHILOSOPHER_PROFILES` (voice + TTS instructions) in `generator.py`.
 - **Reuse installed packages** — reachy_mini, reachy_mini_dances_library, openai.
+- **Robot speaker audio has two paths.** The SDK streams PCM over WebRTC, which
+  needs the GStreamer `webrtcsrc` element (gst-plugins-rs) on the PC. When the
+  worker reports `audio_ready=False` (e.g. the Ubuntu 20.04 exhibit PC, GStreamer
+  1.16), `player.py` falls back to uploading each turn's WAV to the robot daemon
+  and triggering `/api/media/play_sound` (`RobotController.play_sound_file`).
 
 ## Running
 ```bash
 cp .env.example .env   # Add OPENAI_API_KEY and ELEVENLABS_API_KEY
 uv run python scripts/test_connectivity.py  # verify robots on the network
 uv run ethics-podcast                        # interactive menu: Generate / Play / Exit
+uv run ethics-podcast --exhibit              # headless Multi-Display Exhibit (waits for PLAY on /top)
+scripts/install_service.sh                   # run --exhibit resident as systemd user service
 ```
 
 ## Project Structure
@@ -62,7 +69,9 @@ src/ethics_podcast/
   video_window.py      — VLC video window (PySide6)
   multi_video_discussion.py — Multi-display exhibit loop
   displays/            — PySide6 windows (top + mini per robot)
-  web_display/         — Browser-served display pages (LAN)
+  web_display/         — Browser-served display pages (LAN); /top carries the
+                         PLAY / STOP / loop / volume transport that gates the loop,
+                         plus the ROBOT / BROWSER switch for where voices play
   bgm_manager.py       — Background music
   wake_word.py         — Optional voice activation
   input_utils.py       — Shared console input helpers (arrow keys)

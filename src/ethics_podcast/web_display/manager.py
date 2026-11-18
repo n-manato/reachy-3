@@ -33,6 +33,12 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from scipy.io import wavfile
 
+from ethics_podcast.config import (
+    AUDIO_OUTPUTS,
+    LOOP_MODES,
+    normalize_audio_output,
+    normalize_loop_mode,
+)
 from ethics_podcast.web_display import pages
 
 logger = logging.getLogger(__name__)
@@ -160,6 +166,8 @@ class WebDisplayManager:
         top_monitor: int = 0,
         mini_monitors: tuple[int, int, int] = (1, 2, 3),
         test_mode: bool = False,
+        loop_mode: str = "sequential",
+        audio_output: str = "browser",
     ):
         self.host = host
         self.port = port
@@ -190,6 +198,9 @@ class WebDisplayManager:
             "speechAudioSrc": "",
             "speechAudioEpoch": 0,
             "speechPan": 0.0,
+            # Seconds into the clip to start from (non-zero only for a line
+            # moved to the browser mid-way by the voice-output switch).
+            "speechOffset": 0.0,
             "bgmSrc": "",
             "bgmVolume": 0.18,
             "muted": False,
@@ -197,6 +208,14 @@ class WebDisplayManager:
             "topic": "",
             "current": None,
             "next": None,
+            # Transport, driven from the /top page's PLAY / STOP buttons. The
+            # page's volume slider is page-local (browser audio only) and is
+            # deliberately not mirrored here.
+            "transport": "stopped",  # "stopped" | "playing"
+            "loopMode": normalize_loop_mode(loop_mode),
+            # Where the robots' voices play: "robot" speakers or this "browser".
+            # Picked live on /top; the player reads it at the start of each turn.
+            "audioOutput": normalize_audio_output(audio_output),
         }
         # 3-display setup: the big top screen plus 2 mini screens BETWEEN the
         # robots. Both minis show the SAME unified view — the current speaker's
@@ -217,6 +236,12 @@ class WebDisplayManager:
 
         # Set when a top browser reports the current video ended.
         self._video_ended = asyncio.Event()
+
+        # The exhibit loop starts stopped and waits on _play_gate, so nothing
+        # runs until someone presses PLAY on /top -- which doubles as the user
+        # gesture the browser needs before it will play audio at all.
+        self._play_gate = asyncio.Event()
+        self._stop_gate = asyncio.Event()
 
         self._loop = asyncio.get_event_loop()
         self.app = self._build_app()
@@ -474,6 +499,22 @@ class WebDisplayManager:
             self.toggle_muted()
             return
 
+        if msg_type == "play":
+            self.request_play()
+            return
+
+        if msg_type == "stop":
+            self.request_stop()
+            return
+
+        if msg_type == "cycle_loop":
+            self.cycle_loop()
+            return
+
+        if msg_type == "set_output":
+            self.set_audio_output(msg.get("output"))
+            return
+
     # ── Broadcasting ──────────────────────────────────────────────────────────
 
     def _push(self, channel: str, msg: dict) -> None:
@@ -540,6 +581,82 @@ class WebDisplayManager:
             f"-> {len(self._conns['top'])} top display(s)"
         )
         self._broadcast_top()
+
+    # ── Transport (PLAY / STOP / loop mode / volume on the /top page) ─────────
+
+    @property
+    def is_playing(self) -> bool:
+        return self._top["transport"] == "playing"
+
+    def request_play(self) -> None:
+        if self.is_playing:
+            return
+        self._top["transport"] = "playing"
+        self._stop_gate.clear()
+        self._play_gate.set()
+        self._broadcast_top()
+        print("  [web] PLAY")
+
+    def request_stop(self) -> None:
+        """Ask the exhibit loop to wind down.
+
+        The page silences its own audio at once; the loop cancels the running
+        item, settles the robots and switches to the attract card.
+        """
+        if not self.is_playing:
+            return
+        self._top["transport"] = "stopped"
+        # Leave nothing for a page (re)connecting in the wind-down gap to
+        # resume: drop the video mode and the current line, idle the minis.
+        # The loop follows up with the attract card once it has wound down.
+        self._top.update(mode="topic", current=None, next=None)
+        self.speech_audio_path = None
+        self._play_gate.clear()
+        self._stop_gate.set()
+        self._broadcast_top()
+        self._mini_idle()
+        print("  [web] STOP")
+
+    async def wait_for_play(self) -> None:
+        await self._play_gate.wait()
+
+    async def wait_for_stop(self) -> None:
+        await self._stop_gate.wait()
+
+    @property
+    def loop_mode(self) -> str:
+        return self._top["loopMode"]
+
+    def cycle_loop(self) -> None:
+        """Step to the next loop mode, the way a music player's button does.
+
+        Cycled on the server so there is one source of truth: the page only
+        ever says "next", and every connected display sees the same answer.
+        """
+        index = LOOP_MODES.index(self._top["loopMode"])
+        self._top["loopMode"] = LOOP_MODES[(index + 1) % len(LOOP_MODES)]
+        self._broadcast_top()
+        print(f"  [web] loop mode: {self._top['loopMode']}")
+
+    @property
+    def audio_output(self) -> str:
+        return self._top["audioOutput"]
+
+    def set_audio_output(self, output) -> None:
+        """Send the robots' voices to the robot speakers or to the /top browser.
+
+        Takes effect at once: the page pauses its voice on "robot", and the
+        player moves the line being spoken (and the BGM) to the new output.
+        Video audio always plays in the browser either way.
+        """
+        if output not in AUDIO_OUTPUTS or output == self._top["audioOutput"]:
+            return
+        self._top["audioOutput"] = output
+        if output != "browser":
+            # Nothing for a (re)connecting page to pick up and replay.
+            self.speech_audio_path = None
+        self._broadcast_top()
+        print(f"  [web] voice output: {output}")
 
     def _broadcast_minis(self) -> None:
         """Send the current unified mini view to EVERY mini display, identically."""
@@ -645,14 +762,21 @@ class WebDisplayManager:
         text: str,
         turn_number: int | None = None,
         audio_path: str | Path | None = None,
+        speech_audio: bool | None = None,
     ) -> None:
-        if audio_path is not None and Path(audio_path).exists():
-            self.speech_audio_path = Path(audio_path)
-            self._top["speechAudioEpoch"] += 1
-            self._top["speechPan"] = SPEECH_PAN.get(role, 0.0)
-            # Warm the MP3 cache off-loop so the browser's fetch hits a ready
-            # file instead of waiting on the transcode.
-            self._loop.create_task(self._get_web_audio(self.speech_audio_path))
+        """A robot starts a line: subtitle everywhere, voice in the browser.
+
+        ``speech_audio`` says whether the /top browser plays this line; the
+        player passes the decision it made for the turn so the browser and the
+        robot speaker never both (or neither) play it. ``None`` follows the
+        current voice-output switch. ``audio_path`` still drives the mini orb.
+        """
+        if speech_audio is None:
+            speech_audio = self.audio_output == "browser"
+        if not speech_audio:
+            self.speech_audio_path = None
+        elif audio_path is not None and Path(audio_path).exists():
+            self._set_speech(role, Path(audio_path), 0.0)
         self._top["current"] = role
         self._top["next"] = None
         self._broadcast_top()
@@ -663,6 +787,24 @@ class WebDisplayManager:
         self._mini_state.update(state="speaking", speaker=role, text=text)
         self._broadcast_minis()
         self._start_level(audio_path)
+
+    def play_speech(self, role: str, audio_path: str | Path, offset: float = 0.0) -> None:
+        """Play a line in the browser from ``offset`` seconds in.
+
+        Used when the voice-output switch moves a line that is already being
+        spoken on a robot over to the browser.
+        """
+        self._set_speech(role, Path(audio_path), offset)
+        self._broadcast_top()
+
+    def _set_speech(self, role: str, path: Path, offset: float) -> None:
+        self.speech_audio_path = path
+        self._top["speechAudioEpoch"] += 1
+        self._top["speechPan"] = SPEECH_PAN.get(role, 0.0)
+        self._top["speechOffset"] = round(max(0.0, float(offset)), 2)
+        # Warm the MP3 cache off-loop so the browser's fetch hits a ready
+        # file instead of waiting on the transcode.
+        self._loop.create_task(self._get_web_audio(path))
 
     def finish_subtitle(self, role: str, next_role: str | None = None) -> None:
         self.point_to(next_role)
