@@ -10,6 +10,12 @@ self-contained project with its own README, dependencies and deployment files.
 | [leading-through-ai/](leading-through-ai/) | Leading Through AI | Play an AI C-suite (innovation, people, risk) debating leadership topics, with audience voting. |
 | [boma-exhibit/](boma-exhibit/) | BOMA | Perform a fixed welcome sketch, each robot speaking a different language. |
 
+Also here, although it is a tool rather than an exhibit:
+
+| Folder | What it is |
+|---|---|
+| [remote-connect/](remote-connect/) | Starter kit that lets students write and run their own Reachy Mini app from a Windows PC over the university VPN: one-step setup, SSH tunnel for motion, camera, microphone and speaker, and a browser check page. |
+
 The nine-robot orchestra lives in a separate repository,
 [reachy-10](https://github.com/n-manato/reachy-10).
 
