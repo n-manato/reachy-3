@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=While they test, we run shadow mode in production. The agent proposes; humans act. We’ll clear backlog patterns, harden prompts, and be ready to flip on with evidence.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=A pause only creates value if it's time-boxed and visible. Share the burn-down, who owns each fix, and the date to restart. Protect momentum as fiercely as you protect data.

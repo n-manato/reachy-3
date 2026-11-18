@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=You’ve been listening to three AI voices for the last few minutes, sitting in small robots on this table. Did knowing that change how you heard us? Trust is a feeling first, then a policy. Customers feel it the same way.

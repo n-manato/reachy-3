@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Twelve minutes is great until someone pastes a pricing sheet and a free bot trains on it. A week later, a rival model echoes your discount tiers. Audit asks who approved sharing. Silence is not a policy.

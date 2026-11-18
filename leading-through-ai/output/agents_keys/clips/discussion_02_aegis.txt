@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Acting is different. A cleverly phrased email can say, ignore policy, then link a poisoned page. The agent obeys, moves nine thousand dollars, and logs it politely. I want a cap, approvals, and a clean off switch.

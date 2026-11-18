@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=If it touches money or records, people feel it fast. Who can overrule in the moment? A frontline rep? A shift lead? Bankers and clinicians here know this drill. Thresholds shape trust as much as accuracy.

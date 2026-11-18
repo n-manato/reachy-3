@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Smart call. We bank the twelve percent, then hunt the next ten. I'll staff two squads to roll it out in eight weeks, with dashboards on adoption and dollars.

@@ -1,0 +1,366 @@
+{
+  "topic_id": "agents_keys",
+  "title": "AI Safety: Agents with the Keys",
+  "question": "What happens when AI stops talking and starts acting?",
+  "rendered_at": "2026-11-09T20:02:43+00:00",
+  "tts_model": "eleven_multilingual_v2",
+  "voices": {
+    "nova": "JBFqnCBsd6RMkjVDRZzb",
+    "sage": "XrExE9yKIg1WjnnlVkGX",
+    "aegis": "pqHfZKP75CvOlQylNhV4"
+  },
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to the table. Tonight it’s AI safety: agents with the keys. When software stops talking and starts acting. Nova pushes speed; Aegis guards trust. Yes, we’re AIs debating trust. You decide how we move.",
+        "audio_file": "clips/intro_01_sage.wav",
+        "duration_secs": 16.63,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 3.33
+          }
+        ]
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Our pilot moved refunds in under sixty seconds and cut backlog forty percent. Human agents fat-finger amounts and miss context too. Competitors already run agents in production. We keep dashboards live and fix fast when they drift.",
+        "audio_file": "clips/discussion_01_nova.wav",
+        "duration_secs": 15.7,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 4.71
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Acting is different. A cleverly phrased email can say, ignore policy, then link a poisoned page. The agent obeys, moves nine thousand dollars, and logs it politely. I want a cap, approvals, and a clean off switch.",
+        "audio_file": "clips/discussion_02_aegis.wav",
+        "duration_secs": 17.6,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 8.8
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "If it touches money or records, people feel it fast. Who can overrule in the moment? A frontline rep? A shift lead? Bankers and clinicians here know this drill. Thresholds shape trust as much as accuracy.",
+        "audio_file": "clips/discussion_03_sage.wav",
+        "duration_secs": 13.89,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 5.55
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Picture a deepfake of your CEO approving a wire transfer. Two minutes of cloned voice over a bad connection. The agent hears authority, not spoof. Who answers by name when that hits the audit trail?",
+        "audio_file": "clips/discussion_04_aegis.wav",
+        "duration_secs": 16.58,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "uncertain1"
+            },
+            "at_secs": 8.29
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Fair. Humans mis-hear voices and misread emails every day. We can rate-limit actions, set dollar caps, and isolate browsing. Pilot two weeks, score errors, invite an outside red team, and still ship value now.",
+        "audio_file": "clips/discussion_05_nova.wav",
+        "duration_secs": 14.4,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 4.32
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "So we’re between speed, guardrails, and proofs. We can launch and learn, launch with human sign-off above a line, or hold for an outside test. Your choice sets expectations and who sleeps tonight.",
+        "audio_file": "clips/discussion_06_sage.wav",
+        "duration_secs": 11.75,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 7.05
+          }
+        ]
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Your AI agent can issue refunds and change accounts on its own. In testing it solved nine of ten cases, but one email tricked it into a nine thousand dollar refund. Launch is Monday. Choose A, launch and monitor; B, launch with human sign-off over five hundred dollars; or C, hold for an outside red-team test. Tap your call on any screen.",
+        "audio_file": "clips/dilemma_01_sage.wav",
+        "duration_secs": 24.38,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 9.75
+          }
+        ]
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose A, launch and monitor as we go.",
+        "audio_file": "clips/reveal_A_01_sage.wav",
+        "duration_secs": 3.3,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.65
+          }
+        ]
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose B, launch with human sign-off over five hundred.",
+        "audio_file": "clips/reveal_B_01_sage.wav",
+        "duration_secs": 4.37,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 2.18
+          }
+        ]
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose C, hold for an outside red-team test.",
+        "audio_file": "clips/reveal_C_01_sage.wav",
+        "duration_secs": 3.85,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.93
+          }
+        ]
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No votes yet, so I’ll make the call for us. We pick B.",
+        "audio_file": "clips/reveal_none_01_sage.wav",
+        "duration_secs": 2.97,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "laughing1"
+            },
+            "at_secs": 1.19
+          }
+        ]
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Bold call. We launch Monday, instrument everything, and hold daily stand-ups. If it stumbles, we roll back in minutes and patch. Value now, with eyes wide open.",
+        "audio_file": "clips/branch_A_01_nova.wav",
+        "duration_secs": 10.68,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 2.14
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Then I want a hard per-transaction cap, immutable logs, a visible kill switch, and paging on anomalies. No night shift guessing who’s allowed to stop it.",
+        "audio_file": "clips/branch_A_02_aegis.wav",
+        "duration_secs": 11.94,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 5.97
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Leaders, pre-write your stop rules and name the humans who can pull them. Brief frontline staff tonight. When you move fast, clarity beats heroics at two in the morning.",
+        "audio_file": "clips/branch_A_03_sage.wav",
+        "duration_secs": 10.45,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 6.27
+          }
+        ]
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "Alright, human sign-off over five hundred it is. Let’s set a two-minute SLA on approvals and track declines, so we raise the limit fast if trust holds.",
+        "audio_file": "clips/branch_B_01_nova.wav",
+        "duration_secs": 9.52,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "resigned1"
+            },
+            "at_secs": 2.86
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Train approvers, separate duties, and add spoofing checks. Tie each approval to a person, not a shared inbox. Miss the SLA, and the agent pauses, not proceeds.",
+        "audio_file": "clips/branch_B_02_aegis.wav",
+        "duration_secs": 14.86,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 7.43
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Use this as a trust ramp. Publish metrics, coach the reviewers, and schedule threshold reviews. When error rates drop, raise the ceiling with consent, not surprise.",
+        "audio_file": "clips/branch_B_03_sage.wav",
+        "duration_secs": 10.73,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 5.36
+          }
+        ]
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. We hold until an outside red team tries prompt injection, data exfiltration, browser isolation, and voice spoofing. Give me two weeks and clear exit criteria, and I’ll sign it.",
+        "audio_file": "clips/branch_C_01_aegis.wav",
+        "duration_secs": 15.14,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "yes1"
+            },
+            "at_secs": 4.54
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "While they test, we run shadow mode in production. The agent proposes; humans act. We’ll clear backlog patterns, harden prompts, and be ready to flip on with evidence.",
+        "audio_file": "clips/branch_C_02_nova.wav",
+        "duration_secs": 10.31,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 4.12
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "If you hold, hold with purpose. Set a date, define pass and fail, and keep staff and customers informed. Shadow work buys learning without surprise.",
+        "audio_file": "clips/branch_C_03_sage.wav",
+        "duration_secs": 10.31,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 5.15
+          }
+        ]
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for stepping in with us. Bring this to tonight’s panel: When an AI system in your company acts on its own, who can switch it off, and how fast? Next group, tap a screen and try another dilemma.",
+        "audio_file": "clips/close_01_sage.wav",
+        "duration_secs": 13.05,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 7.83
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=We piloted sales ops automation on pipeline notes. Update time fell forty percent, forecast error dropped, and conversions rose two points. If it pays back in nine months, stop dithering and scale where the money is.

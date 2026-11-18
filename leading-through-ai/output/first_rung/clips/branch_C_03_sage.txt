@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Teach the craft, then the copilot. Write a crisp curriculum, pair real cases with simulations, and publish the graduation bar. Apprentices earn trust, then scale it with AI, not the other way around.

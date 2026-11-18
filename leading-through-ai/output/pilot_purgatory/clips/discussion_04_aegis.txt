@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Adoption without guardrails creates creative risk. One well-meaning analyst pasted salary data into a prompt. Now it's in the log. We need redaction, approved connectors, and kill switches before the next demo day.

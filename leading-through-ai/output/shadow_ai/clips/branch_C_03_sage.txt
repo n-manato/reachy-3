@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=A pause needs purpose. Tell teams why, what stays open, and the exact date the pilot starts. Keep leaders visible in office hours. Share progress weekly so trust grows, not rumors.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Make it nine weeks and add gating. No personal data in prompts, auto redaction on, audit logs retained, and a rollback plan. Scale is fine when exits are signposted.

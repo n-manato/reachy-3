@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for diving in with us. Bring this to tonight's panel: What separated the AI initiatives that delivered real value from the ones that stalled. If you're just joining, tap a screen and try another dilemma.

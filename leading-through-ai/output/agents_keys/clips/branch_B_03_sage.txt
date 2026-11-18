@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Use this as a trust ramp. Publish metrics, coach the reviewers, and schedule threshold reviews. When error rates drop, raise the ceiling with consent, not surprise.

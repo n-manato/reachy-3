@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Then I want two safeguards: auto-approval thresholds tied to risk, and a human-led appeals desk with forty-eight-hour turnaround. Plus, quarterly fairness audits across age, income, and ZIP, published to your board.

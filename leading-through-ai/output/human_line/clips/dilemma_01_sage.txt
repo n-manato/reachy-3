@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Here’s your real-world scenario. Your AI can approve or deny eighty percent of customer claims instantly, saving four million dollars a year. Errors are rare, but hard to explain on a call. What’s your call? A, let AI decide automatically; B, AI decides, but a human reviews every denial; or C, AI only recommends, people make every decision. Tap your choice on any screen.

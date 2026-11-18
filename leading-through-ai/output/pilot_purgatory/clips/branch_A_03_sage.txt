@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=If you scale now, over-invest in coaching and champions. Tie bonuses to usage quality, not clicks. Publish the guardrails in plain English. Speed plus clarity beats quiet resistance.

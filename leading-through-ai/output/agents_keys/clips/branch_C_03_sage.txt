@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=If you hold, hold with purpose. Set a date, define pass and fail, and keep staff and customers informed. Shadow work buys learning without surprise.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Alright, you want redesign. Give me two frontline squads and a week of ride-alongs. We'll kill three steps, keep the one that users love, and prove a bigger win.

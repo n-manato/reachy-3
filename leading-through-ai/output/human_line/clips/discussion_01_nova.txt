@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Speed wins. We launched a pilot that auto-resolved eighty percent of tier-one tickets in six weeks, cut waits from eight minutes to under one, and saved two point four million. Delay that, and a rival steals your customers.

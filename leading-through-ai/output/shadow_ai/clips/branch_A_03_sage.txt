@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Lead it in daylight. Pair every license with one hour of hands on training, a do and do not card, and a named owner for outcomes. Celebrate wins, and surface near misses without blame.

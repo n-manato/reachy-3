@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for weighing the Human Line with us. Bring this to tonight’s panel: Which decisions in your organization have you deliberately kept in human hands, and why? If you’ve just arrived, tap a screen and try another dilemma.

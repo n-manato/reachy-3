@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Good. Make denial reviewers independent from sales targets, and rotate them. Randomly sample approvals too, or fraud learns the pattern. Log every reversal and feed it back into training with documented reasons.

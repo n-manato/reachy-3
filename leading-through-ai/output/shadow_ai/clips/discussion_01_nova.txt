@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Your teams already use it. Sixty percent admit it, and the rest just do not say it. A sales deck that took two hours now takes twelve minutes. Give enterprise tools, then measure lift in win rate.

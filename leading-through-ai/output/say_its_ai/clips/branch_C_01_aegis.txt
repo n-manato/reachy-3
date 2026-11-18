@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Thank you. Name the sensitive zones in plain English, not a footnote. Money movement, diagnoses, collections, bereavement, layoffs. Humans lead, AI supports. A caring tone should never mask the stakes or the options.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=People accept mistakes they understand. Opaque math doesn’t feel fair. After two confusing answers, one in three customers hangs up angry. That’s not just CX, that’s morale in your call center and trust in your brand.

@@ -1,0 +1,366 @@
+{
+  "topic_id": "first_rung",
+  "title": "AI Replacement: The First Rung",
+  "question": "If AI does the entry-level work, where do future leaders come from?",
+  "rendered_at": "2026-11-09T20:03:06+00:00",
+  "tts_model": "eleven_multilingual_v2",
+  "voices": {
+    "nova": "JBFqnCBsd6RMkjVDRZzb",
+    "sage": "XrExE9yKIg1WjnnlVkGX",
+    "aegis": "pqHfZKP75CvOlQylNhV4"
+  },
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to our table at Leading Through AI. Tonight’s topic is AI Replacement: The First Rung. When AI does entry‑level work, where do future leaders come from? Nova pushes speed, Aegis guards risk, and yes, three AIs debating humans.",
+        "audio_file": "clips/intro_01_sage.wav",
+        "duration_secs": 18.3,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 3.66
+          }
+        ]
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Our pilots show AI now does roughly sixty percent of first‑year analyst tasks. Cost per ticket drops by half. A two‑person billing squad with a copilot cleared a six‑week backlog in two. Speed wins markets.",
+        "audio_file": "clips/discussion_01_nova.wav",
+        "duration_secs": 14.12,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 4.24
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Speed without apprenticeship backfires. In the contact center, bots take routine calls, humans get only escalations. Call‑handling stress spikes, and errors hide in the rough. When no one learns the basics, who spots the model’s quiet drift?",
+        "audio_file": "clips/discussion_02_aegis.wav",
+        "duration_secs": 19.37,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 7.75
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "How did you learn your craft? Bankers, clinicians, and public‑sector program managers, you did reps, got feedback, and earned judgment. If first jobs become exception handling, we must teach pattern recognition on purpose, not by accident.",
+        "audio_file": "clips/discussion_03_sage.wav",
+        "duration_secs": 16.07,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 8.03
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "And design guardrails. If the model misroutes three percent of high‑risk cases, averages look fine, fraud and triage do not. Set escalation thresholds, supervision ratios, and who signs off when the machine sounds confident but wrong.",
+        "audio_file": "clips/discussion_04_aegis.wav",
+        "duration_secs": 18.81,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 7.52
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Fair, so redesign the first rung. Unbundle tasks, build gold‑standard examples, and rotate shadowing. Target metrics: cut handle time forty percent, double coaching hours, and lift customer satisfaction five points. Small teams, weekly reviews, promotions on outcomes, not keystrokes.",
+        "audio_file": "clips/discussion_05_nova.wav",
+        "duration_secs": 19.69,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "proud1"
+            },
+            "at_secs": 7.88
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "So the lever isn’t headcount, it’s how we grow judgment. Do we compress hiring and amp the stack, or keep the class and rebuild the job? Time to let the room steer.",
+        "audio_file": "clips/discussion_06_sage.wav",
+        "duration_secs": 9.94,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 5.96
+          }
+        ]
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Here’s our live decision. In our company, AI now handles about sixty percent of the work your first‑year analysts do. You planned to hire ten graduates this year. What’s your call? A, hire three and invest the savings in AI; B, hire all ten and rebuild their jobs around AI; or C, hire all ten, but train them without AI first. Tap your choice on any screen.",
+        "audio_file": "clips/dilemma_01_sage.wav",
+        "duration_secs": 27.45,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 10.98
+          }
+        ]
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of you chose A: hire three and invest the savings in AI.",
+        "audio_file": "clips/reveal_A_01_sage.wav",
+        "duration_secs": 4.09,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.23
+          }
+        ]
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of you picked B: hire all ten and rebuild their jobs.",
+        "audio_file": "clips/reveal_B_01_sage.wav",
+        "duration_secs": 3.67,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.1
+          }
+        ]
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Most of you leaned C: hire all ten, but train them without AI.",
+        "audio_file": "clips/reveal_C_01_sage.wav",
+        "duration_secs": 4.23,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.27
+          }
+        ]
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No taps yet, so I’ll pick B for the room to keep us honest.",
+        "audio_file": "clips/reveal_none_01_sage.wav",
+        "duration_secs": 3.2,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.28
+          }
+        ]
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Smart call. Three hungry hires with strong copilots can outproduce yesterday’s ten. We bank the savings, feed the models, and put the best work in human hands faster.",
+        "audio_file": "clips/branch_A_01_nova.wav",
+        "duration_secs": 10.4,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 3.12
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Then fund apprenticeship on purpose. Document decisions, rotate domain reviews, and cap queue intensity. Budget for bias testing and audit logs, or your lean team becomes a fragile team when the spotlight hits.",
+        "audio_file": "clips/branch_A_02_aegis.wav",
+        "duration_secs": 16.16,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 8.08
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Lean can work if you widen the learning surface. Pair every sprint with coaching, rotate them across products, and reward asking for a second opinion. The first rung must still teach judgment.",
+        "audio_file": "clips/branch_A_03_sage.wav",
+        "duration_secs": 12.49,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 6.25
+          }
+        ]
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "You kept the class and changed the job. I love the capacity. Set targets like twice the throughput per person and a quarter the rework, or it’s just payroll with fancier tools.",
+        "audio_file": "clips/branch_B_01_nova.wav",
+        "duration_secs": 11.1,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 4.44
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Make it safe to learn. Sandbox environments, red‑team days, and clear escalation ladders. Track near‑misses as proudly as wins, or you’ll only discover gaps when regulators or customers do.",
+        "audio_file": "clips/branch_B_02_aegis.wav",
+        "duration_secs": 14.95,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 7.48
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "This choice puts culture to work. Treat AI as the new spreadsheet: universal, taught early, governed tightly, and audited. Your grads master tools and judgment together, with mentors who model when to slow down.",
+        "audio_file": "clips/branch_B_03_sage.wav",
+        "duration_secs": 15.23,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 7.62
+          }
+        ]
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. Skill before speed. Let them work paper‑first a quarter, learn the smell of bad data, then layer tools. People who can check the machine keep you resilient.",
+        "audio_file": "clips/branch_C_01_aegis.wav",
+        "duration_secs": 12.77,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "proud1"
+            },
+            "at_secs": 5.11
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "I’ll back it with a clock. Ninety days max without AI, then staged ramp‑in by use case. Otherwise you burn runway and lose compounding gains to competitors who learned while you paused.",
+        "audio_file": "clips/branch_C_02_nova.wav",
+        "duration_secs": 10.96,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 4.38
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Teach the craft, then the copilot. Write a crisp curriculum, pair real cases with simulations, and publish the graduation bar. Apprentices earn trust, then scale it with AI, not the other way around.",
+        "audio_file": "clips/branch_C_03_sage.wav",
+        "duration_secs": 13.47,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 6.73
+          }
+        ]
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for weighing in. Bring this to tonight’s panel: if AI takes over entry‑level work, how will your organization grow its next generation of leaders? Invite the next group over, tap a screen, and try another dilemma.",
+        "audio_file": "clips/close_01_sage.wav",
+        "duration_secs": 14.4,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 4.32
+          }
+        ]
+      }
+    ]
+  }
+}

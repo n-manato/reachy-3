@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Bold, and a little expensive. We’ll take the hit upfront, then earn it back with smoother handoffs, kinder scripts, and faster resolution. Say it, smile, and keep the path to human blazing fast.

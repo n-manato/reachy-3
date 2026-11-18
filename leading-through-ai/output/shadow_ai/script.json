@@ -1,0 +1,163 @@
+{
+  "topic_id": "shadow_ai",
+  "title": "Shadow AI",
+  "question": "How do you lead people through AI change?",
+  "script_model": "gpt-5",
+  "generated_at": "2026-11-08T06:35:11+00:00",
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to our table at Leading Through AI here at UNO. Tonight we tackle Shadow AI, and how you lead people through it. Nova pushes speed. Aegis guards trust. You’ll make the call.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.3
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Your teams already use it. Sixty percent admit it, and the rest just do not say it. A sales deck that took two hours now takes twelve minutes. Give enterprise tools, then measure lift in win rate.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.2
+      },
+      {
+        "role": "aegis",
+        "text": "Twelve minutes is great until someone pastes a pricing sheet and a free bot trains on it. A week later, a rival model echoes your discount tiers. Audit asks who approved sharing. Silence is not a policy.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.4
+      },
+      {
+        "role": "sage",
+        "text": "People want frictionless help, not lectures. If we punish honesty, they hide. If we shrug, we gamble with customers. What do teams need first: skills, safe tools, or leaders modeling prompts and red lines in public?",
+        "emotion": "inquiring1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "aegis",
+        "text": "Start with boundaries and identity. Ban pasting personal data, contracts, and source code. Route logins through single sign on. Use data loss prevention. Then train on red teaming prompts, because polite models still hallucinate facts.",
+        "emotion": "helpful1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "nova",
+        "text": "Fine, guard the crown jewels. But do not slow the floor. Pilot an enterprise chatbot next week for one hundred people. Track cycle time, error rates, and satisfaction. Expand when you see a ten percent lift.",
+        "emotion": "proud1",
+        "emotion_at": 0.6
+      },
+      {
+        "role": "sage",
+        "text": "So we see the trade. Speed gives energy and shortcuts. Guardrails give confidence and cover. Your workforce is already moving. The question is how you respond on Monday morning, and what signal your choice sends.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "You discover that sixty percent of your staff paste company data into public AI chatbots to get work done. What is your call? A, embrace it with enterprise AI licenses for everyone tomorrow; B, approved tools, training and guardrails, with amnesty for past use; or C, block public AI tools until a policy is in place. Tap your call on any screen.",
+        "emotion": "inquiring1",
+        "emotion_at": 0.4
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of you chose A, enterprise AI licenses for everyone tomorrow.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.4
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of you chose B, approved tools, training and guardrails, with amnesty.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.4
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Most of you chose C, block public AI tools until a policy exists.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.4
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No votes yet. I will make the room’s call and go with B.",
+        "emotion": "laughing1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "That is the energy I like. We buy licenses, switch on audit logs, and put copilots on desks by Friday. We will learn faster than any memo ever could.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "aegis",
+        "text": "Add data segregation and default to human review on outputs touching customers. Keep prompts and files out of training by contract. Budget for red team sprints before each new capability.",
+        "emotion": "helpful1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "sage",
+        "text": "Lead it in daylight. Pair every license with one hour of hands on training, a do and do not card, and a named owner for outcomes. Celebrate wins, and surface near misses without blame.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "Practical middle lane. I can live with guardrails if we move fast. Publish three approved tools this month, then sunset two legacy steps the training makes obsolete.",
+        "emotion": "understanding1",
+        "emotion_at": 0.4
+      },
+      {
+        "role": "aegis",
+        "text": "Run a privacy impact check on each tool. Enable retention controls. Create an amnesty inbox for past use, and promise learning over punishment, unless someone knowingly leaked restricted data.",
+        "emotion": "helpful1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "sage",
+        "text": "Make it safe to learn. Start every staff meeting with one useful prompt and one boundary story. Track adoption, errors, and customer impact. Thank the confessors. Coach the careless. Repeat weekly for ninety days.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. Hitting pause beats hitting headlines. We block public tools now, ship a clear policy in thirty days, and open a pilot so work does not stall.",
+        "emotion": "yes1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "nova",
+        "text": "Fine, but make the pause count. Pick two critical workflows, build sandboxed assistants, and set a firm go date. If cycle times slip, loosen the gate early.",
+        "emotion": "resigned1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "sage",
+        "text": "A pause needs purpose. Tell teams why, what stays open, and the exact date the pilot starts. Keep leaders visible in office hours. Share progress weekly so trust grows, not rumors.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for diving in with us. Bring this to tonight’s panel: \"How are you building trust and AI skills in your workforce, not just buying tools?\" If you just arrived, tap a screen and try another dilemma.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.4
+      }
+    ]
+  }
+}

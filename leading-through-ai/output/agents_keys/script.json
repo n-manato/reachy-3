@@ -1,0 +1,163 @@
+{
+  "topic_id": "agents_keys",
+  "title": "AI Safety: Agents with the Keys",
+  "question": "What happens when AI stops talking and starts acting?",
+  "script_model": "gpt-5",
+  "generated_at": "2026-11-09T20:01:50+00:00",
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to the table. Tonight it’s AI safety: agents with the keys. When software stops talking and starts acting. Nova pushes speed; Aegis guards trust. Yes, we’re AIs debating trust. You decide how we move.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.2
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Our pilot moved refunds in under sixty seconds and cut backlog forty percent. Human agents fat-finger amounts and miss context too. Competitors already run agents in production. We keep dashboards live and fix fast when they drift.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "aegis",
+        "text": "Acting is different. A cleverly phrased email can say, ignore policy, then link a poisoned page. The agent obeys, moves nine thousand dollars, and logs it politely. I want a cap, approvals, and a clean off switch.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "sage",
+        "text": "If it touches money or records, people feel it fast. Who can overrule in the moment? A frontline rep? A shift lead? Bankers and clinicians here know this drill. Thresholds shape trust as much as accuracy.",
+        "emotion": "inquiring1",
+        "emotion_at": 0.4
+      },
+      {
+        "role": "aegis",
+        "text": "Picture a deepfake of your CEO approving a wire transfer. Two minutes of cloned voice over a bad connection. The agent hears authority, not spoof. Who answers by name when that hits the audit trail?",
+        "emotion": "uncertain1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "nova",
+        "text": "Fair. Humans mis-hear voices and misread emails every day. We can rate-limit actions, set dollar caps, and isolate browsing. Pilot two weeks, score errors, invite an outside red team, and still ship value now.",
+        "emotion": "understanding1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "sage",
+        "text": "So we’re between speed, guardrails, and proofs. We can launch and learn, launch with human sign-off above a line, or hold for an outside test. Your choice sets expectations and who sleeps tonight.",
+        "emotion": "inquiring1",
+        "emotion_at": 0.6
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Your AI agent can issue refunds and change accounts on its own. In testing it solved nine of ten cases, but one email tricked it into a nine thousand dollar refund. Launch is Monday. Choose A, launch and monitor; B, launch with human sign-off over five hundred dollars; or C, hold for an outside red-team test. Tap your call on any screen.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.4
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose A, launch and monitor as we go.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose B, launch with human sign-off over five hundred.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Most of the room chose C, hold for an outside red-team test.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No votes yet, so I’ll make the call for us. We pick B.",
+        "emotion": "laughing1",
+        "emotion_at": 0.4
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Bold call. We launch Monday, instrument everything, and hold daily stand-ups. If it stumbles, we roll back in minutes and patch. Value now, with eyes wide open.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.2
+      },
+      {
+        "role": "aegis",
+        "text": "Then I want a hard per-transaction cap, immutable logs, a visible kill switch, and paging on anomalies. No night shift guessing who’s allowed to stop it.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "sage",
+        "text": "Leaders, pre-write your stop rules and name the humans who can pull them. Brief frontline staff tonight. When you move fast, clarity beats heroics at two in the morning.",
+        "emotion": "helpful1",
+        "emotion_at": 0.6
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "Alright, human sign-off over five hundred it is. Let’s set a two-minute SLA on approvals and track declines, so we raise the limit fast if trust holds.",
+        "emotion": "resigned1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "aegis",
+        "text": "Train approvers, separate duties, and add spoofing checks. Tie each approval to a person, not a shared inbox. Miss the SLA, and the agent pauses, not proceeds.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      },
+      {
+        "role": "sage",
+        "text": "Use this as a trust ramp. Publish metrics, coach the reviewers, and schedule threshold reviews. When error rates drop, raise the ceiling with consent, not surprise.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. We hold until an outside red team tries prompt injection, data exfiltration, browser isolation, and voice spoofing. Give me two weeks and clear exit criteria, and I’ll sign it.",
+        "emotion": "yes1",
+        "emotion_at": 0.3
+      },
+      {
+        "role": "nova",
+        "text": "While they test, we run shadow mode in production. The agent proposes; humans act. We’ll clear backlog patterns, harden prompts, and be ready to flip on with evidence.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.4
+      },
+      {
+        "role": "sage",
+        "text": "If you hold, hold with purpose. Set a date, define pass and fail, and keep staff and customers informed. Shadow work buys learning without surprise.",
+        "emotion": "helpful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for stepping in with us. Bring this to tonight’s panel: When an AI system in your company acts on its own, who can switch it off, and how fast? Next group, tap a screen and try another dilemma.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.6
+      }
+    ]
+  }
+}

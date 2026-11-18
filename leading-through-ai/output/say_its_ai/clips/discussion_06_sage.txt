@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=The room includes bankers, healthcare leaders, and the public sector. You balance service, cost, and trust every day. Let’s ask the same of our phones. How clear should we be, and when, before we even start talking?

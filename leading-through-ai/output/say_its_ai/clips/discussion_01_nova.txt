@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Natural voices cut average handle time by forty seconds in our pilots, and upsell conversion ticked up three points. Callers relax when it simply sounds like help. Announce the machine on every routine call, and you tax the many to protect the few.

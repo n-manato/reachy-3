@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=So we see the trade. Speed gives energy and shortcuts. Guardrails give confidence and cover. Your workforce is already moving. The question is how you respond on Monday morning, and what signal your choice sends.

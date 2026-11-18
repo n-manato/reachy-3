@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Speed without apprenticeship backfires. In the contact center, bots take routine calls, humans get only escalations. Call‑handling stress spikes, and errors hide in the rough. When no one learns the basics, who spots the model’s quiet drift?

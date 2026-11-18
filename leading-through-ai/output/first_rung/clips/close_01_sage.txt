@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for weighing in. Bring this to tonight’s panel: if AI takes over entry‑level work, how will your organization grow its next generation of leaders? Invite the next group over, tap a screen, and try another dilemma.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Here’s your call. Our AI phone agent sounds so natural most callers can’t tell. When it opens with I’m an AI assistant, satisfaction drops twenty percent and hang‑ups double. A, only say it’s AI if asked; B, say so up front and offer a human anytime; or C, say so up front and keep humans on sensitive calls. Tap any screen to choose.

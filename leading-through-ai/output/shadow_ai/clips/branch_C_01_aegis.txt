@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Thank you. Hitting pause beats hitting headlines. We block public tools now, ship a clear policy in thirty days, and open a pilot so work does not stall.

@@ -1,0 +1,163 @@
+{
+  "topic_id": "say_its_ai",
+  "title": "AI Ethics: Should AI Say It's AI?",
+  "question": "Do your customers have a right to know they're talking to AI?",
+  "script_model": "gpt-5",
+  "generated_at": "2026-11-09T20:01:17+00:00",
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to Leading Through AI at Omaha. Tonight’s question is simple, and sharp: should AI say it’s AI? Nova pushes speed and delight. Aegis guards trust and accountability. Which matters more when a voice sounds human?",
+        "emotion": "welcoming1",
+        "emotion_at": 0.34
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Natural voices cut average handle time by forty seconds in our pilots, and upsell conversion ticked up three points. Callers relax when it simply sounds like help. Announce the machine on every routine call, and you tax the many to protect the few.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.46
+      },
+      {
+        "role": "aegis",
+        "text": "Now imagine a fraud alert or a benefits denial. The caller thinks it’s a person. Later they learn it wasn’t. That’s not efficiency. That’s a breach of trust that becomes complaints, subpoenas, and state disclosure rules.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.49
+      },
+      {
+        "role": "sage",
+        "text": "You’ve been listening to three AI voices for the last few minutes, sitting in small robots on this table. Did knowing that change how you heard us? Trust is a feeling first, then a policy. Customers feel it the same way.",
+        "emotion": "inquiring1",
+        "emotion_at": 0.39
+      },
+      {
+        "role": "aegis",
+        "text": "There’s also the line between friendly and manipulative. A cloned voice that sounds caring while it sells warranty add‑ons is risky. Healthcare symptoms, debt collections, bereavement calls, and layoffs need humans, not optimism wrapped in a pleasant waveform.",
+        "emotion": "no1",
+        "emotion_at": 0.44
+      },
+      {
+        "role": "nova",
+        "text": "Fair. So draw the line at sensitive calls, then move fast everywhere else. Answer honestly whenever someone asks, keep a human one keypress away, and let the bot be efficient.",
+        "emotion": "helpful1",
+        "emotion_at": 0.45
+      },
+      {
+        "role": "sage",
+        "text": "The room includes bankers, healthcare leaders, and the public sector. You balance service, cost, and trust every day. Let’s ask the same of our phones. How clear should we be, and when, before we even start talking?",
+        "emotion": "inquiring1",
+        "emotion_at": 0.54
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Here’s your call. Our AI phone agent sounds so natural most callers can’t tell. When it opens with I’m an AI assistant, satisfaction drops twenty percent and hang‑ups double. A, only say it’s AI if asked; B, say so up front and offer a human anytime; or C, say so up front and keep humans on sensitive calls. Tap any screen to choose.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.38
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of you chose A, only say it’s AI if asked.",
+        "emotion": "surprised1",
+        "emotion_at": 0.38
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of you chose B, say it up front and offer a human.",
+        "emotion": "yes1",
+        "emotion_at": 0.44
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Most of you chose C, say it up front and keep humans on sensitive calls.",
+        "emotion": "yes1",
+        "emotion_at": 0.46
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No votes yet. I’ll make the call for us and pick B.",
+        "emotion": "cheerful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Smart call. We avoid a loyalty tax on every routine interaction, while staying honest when asked. Put the escape hatch early, press zero anytime, and let the voice do its job.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.55
+      },
+      {
+        "role": "aegis",
+        "text": "Then set guardrails. No AI on bereavement, fraud dispute, or medical advice. Log when callers ask, track complaints, and audit scripts for empathy theater. If people feel fooled, this policy fails.",
+        "emotion": "helpful1",
+        "emotion_at": 0.49
+      },
+      {
+        "role": "sage",
+        "text": "Leaders, make curiosity part of consent. Coach agents to answer plainly, publish the policy, and watch surprise complaints like a hawk. If trust holds while speed rises, you’ve earned this choice.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.5
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "Bold, and a little expensive. We’ll take the hit upfront, then earn it back with smoother handoffs, kinder scripts, and faster resolution. Say it, smile, and keep the path to human blazing fast.",
+        "emotion": "resigned1",
+        "emotion_at": 0.44
+      },
+      {
+        "role": "aegis",
+        "text": "Measure opt‑outs, and define who gets people by default. Seniors, new accounts, fraud flags, and healthcare concerns route to humans. Document consent, capture declines, and build transcripts that survive an audit and a headline.",
+        "emotion": "thoughtful1",
+        "emotion_at": 0.46
+      },
+      {
+        "role": "sage",
+        "text": "If you lead with candor, commit fully. Staff to the peaks, train empathy for handoffs, and market the why. Your brand promise becomes speed with a conscience, and customers will test it every day.",
+        "emotion": "proud1",
+        "emotion_at": 0.48
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. Name the sensitive zones in plain English, not a footnote. Money movement, diagnoses, collections, bereavement, layoffs. Humans lead, AI supports. A caring tone should never mask the stakes or the options.",
+        "emotion": "yes1",
+        "emotion_at": 0.43
+      },
+      {
+        "role": "nova",
+        "text": "We’ll lose some savings, but keep velocity with copilot. Let AI prep summaries, draft responses, and handle after‑call notes. Customers feel heard, leaders sleep, and we still ship improvements every sprint.",
+        "emotion": "enthusiastic1",
+        "emotion_at": 0.51
+      },
+      {
+        "role": "sage",
+        "text": "Make that line public, and move it with evidence. Review escalations monthly with customer stories and data. When the map changes, redraw it. Your credibility is the policy you’re willing to explain.",
+        "emotion": "understanding1",
+        "emotion_at": 0.49
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for weighing in. Bring this to tonight’s panel: where do your customers have a right to know they’re dealing with AI, and where does it not matter? New group, step up, tap a screen, and try another dilemma.",
+        "emotion": "welcoming1",
+        "emotion_at": 0.48
+      }
+    ]
+  }
+}

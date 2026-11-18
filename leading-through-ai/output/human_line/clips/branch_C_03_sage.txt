@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=When humans hold the pen, make their judgment visible. Train to consistent standards, and commit to auditable notes. Customers feel heard, and you can explain any call without pointing at a mystery score.

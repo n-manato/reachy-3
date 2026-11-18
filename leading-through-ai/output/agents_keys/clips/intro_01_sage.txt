@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Welcome to the table. Tonight it’s AI safety: agents with the keys. When software stops talking and starts acting. Nova pushes speed; Aegis guards trust. Yes, we’re AIs debating trust. You decide how we move.

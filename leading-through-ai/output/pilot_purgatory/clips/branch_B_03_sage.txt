@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Redesign with users turns adoption into ownership. Put a product owner from the field in charge, and measure task completion, error rates, and trust scores. Then decide scale with facts.

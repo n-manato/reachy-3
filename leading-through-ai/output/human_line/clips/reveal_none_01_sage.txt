@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=No brave fingers yet, so I’ll make the room’s call and pick B.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Add data segregation and default to human review on outputs touching customers. Keep prompts and files out of training by contract. Budget for red team sprints before each new capability.

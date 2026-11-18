@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=So we’re between speed, guardrails, and proofs. We can launch and learn, launch with human sign-off above a line, or hold for an outside test. Your choice sets expectations and who sleeps tonight.

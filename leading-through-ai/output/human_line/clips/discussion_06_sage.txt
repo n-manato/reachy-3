@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=So where’s the human line tonight: full autonomy, autonomy with oversight, or human decision with AI assist? Before you vote, hold two questions in mind: who explains a bad call, and what will your customers forgive?

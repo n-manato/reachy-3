@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for diving in with us. Bring this to tonight’s panel: "How are you building trust and AI skills in your workforce, not just buying tools?" If you just arrived, tap a screen and try another dilemma.

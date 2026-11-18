@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Welcome to our table at Leading Through AI. Tonight’s topic is AI Replacement: The First Rung. When AI does entry‑level work, where do future leaders come from? Nova pushes speed, Aegis guards risk, and yes, three AIs debating humans.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Explainable models are often two points less accurate. Regulators won’t accept a score alone; they expect clear, specific reasons. If we choose opacity, we need counter-measures: challenge sets, appeals, and an owner who can testify.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Now imagine a fraud alert or a benefits denial. The caller thinks it’s a person. Later they learn it wasn’t. That’s not efficiency. That’s a breach of trust that becomes complaints, subpoenas, and state disclosure rules.

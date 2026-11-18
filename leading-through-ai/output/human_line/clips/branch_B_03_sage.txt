@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=This is a trust dividend model. Tell customers a human double-checks denials, and prove it with response times. Staff for peaks, not averages, or your promise breaks the week after launch.

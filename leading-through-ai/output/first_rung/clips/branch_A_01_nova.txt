@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Smart call. Three hungry hires with strong copilots can outproduce yesterday’s ten. We bank the savings, feed the models, and put the best work in human hands faster.

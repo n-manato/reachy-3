@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Deal, but make the pause work. I want a sprint plan, not a waiting room. Line up quick wins we unlock the day the data hits ninety-five percent quality.
