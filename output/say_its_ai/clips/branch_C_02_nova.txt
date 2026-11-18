@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=We’ll lose some savings, but keep velocity with copilot. Let AI prep summaries, draft responses, and handle after‑call notes. Customers feel heard, leaders sleep, and we still ship improvements every sprint.

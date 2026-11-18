@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=If you lead with candor, commit fully. Staff to the peaks, train empathy for handoffs, and market the why. Your brand promise becomes speed with a conscience, and customers will test it every day.

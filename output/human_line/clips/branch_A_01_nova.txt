@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Yes. Instant decisions delight customers and free capacity. We bank roughly four million, hit same-day SLAs, and redeploy reviewers to complex cases. Let’s monitor drift weekly and keep an appeal path for edge cases.

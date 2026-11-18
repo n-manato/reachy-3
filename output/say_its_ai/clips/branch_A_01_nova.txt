@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Smart call. We avoid a loyalty tax on every routine interaction, while staying honest when asked. Put the escape hatch early, press zero anytime, and let the voice do its job.

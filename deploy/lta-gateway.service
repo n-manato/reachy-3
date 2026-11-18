@@ -1,0 +1,18 @@
+# systemd *user* unit: the public port 8010 behind https://rm2.aiccore-uno.ai/
+#   /lta/...  -> Leading Through AI (8020)    /... -> Ethics Podcast (8011)
+# Independent of both exhibits: either may be stopped without breaking the other.
+[Unit]
+Description=rm2 gateway (8010 -> Ethics Podcast 8011, /lta -> LTA 8020)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/DEV/Reachy_LTA
+ExecStart=%h/.local/bin/uv run --no-sync lta-gateway
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

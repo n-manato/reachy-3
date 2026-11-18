@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=You drew the human line at outcomes. AI assists, people decide. It’s safest for headlines, but costs more. Budget for added headcount, and track decision variance so fairness doesn’t drift shift to shift.

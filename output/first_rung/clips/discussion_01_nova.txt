@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Our pilots show AI now does roughly sixty percent of first‑year analyst tasks. Cost per ticket drops by half. A two‑person billing squad with a copilot cleared a six‑week backlog in two. Speed wins markets.

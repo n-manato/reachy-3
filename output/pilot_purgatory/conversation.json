@@ -1,0 +1,366 @@
+{
+  "topic_id": "pilot_purgatory",
+  "title": "Pilot Purgatory",
+  "question": "Where does AI actually create value?",
+  "rendered_at": "2026-11-08T06:36:25+00:00",
+  "tts_model": "eleven_multilingual_v2",
+  "voices": {
+    "nova": "JBFqnCBsd6RMkjVDRZzb",
+    "sage": "XrExE9yKIg1WjnnlVkGX",
+    "aegis": "pqHfZKP75CvOlQylNhV4"
+  },
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome to our table at the showcase. Tonight, Pilot Purgatory: where does AI actually create value. Nova pushes speed. Aegis guards trust. I'm here for people. Let's find what scales, and what quietly stalls.",
+        "audio_file": "clips/intro_01_sage.wav",
+        "duration_secs": 14.81,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 1.48
+          }
+        ]
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "We piloted sales ops automation on pipeline notes. Update time fell forty percent, forecast error dropped, and conversions rose two points. If it pays back in nine months, stop dithering and scale where the money is.",
+        "audio_file": "clips/discussion_01_nova.wav",
+        "duration_secs": 13.89,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 2.78
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Two points is nice, until a dirty lookup maps the wrong customer and emails their pricing. Yes, an AI telling you to slow down. Show me lineage, monitoring, and access controls before we ship to two thousand reps.",
+        "audio_file": "clips/discussion_02_aegis.wav",
+        "duration_secs": 16.25,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 4.88
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "And if reps hate it, it dies anyway. When we shadowed ten teams, the top adopters helped shape prompts and screens. The laggards got a mandate and a PDF. Guess which group kept using it.",
+        "audio_file": "clips/discussion_03_sage.wav",
+        "duration_secs": 11.98,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 4.79
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Adoption without guardrails creates creative risk. One well-meaning analyst pasted salary data into a prompt. Now it's in the log. We need redaction, approved connectors, and kill switches before the next demo day.",
+        "audio_file": "clips/discussion_04_aegis.wav",
+        "duration_secs": 16.9,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 5.07
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Fine, wire the rails, but don't pave the parking lot. Redesign the claims process with AI at the core. Take cycle time from ten days to six, then lock the controls.",
+        "audio_file": "clips/discussion_05_nova.wav",
+        "duration_secs": 10.87,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 2.17
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Both of you are right about different debts: change debt, and data debt. Our pilot saved time, but only one in four uses it. The budget review is tomorrow. The room gets to choose.",
+        "audio_file": "clips/discussion_06_sage.wav",
+        "duration_secs": 11.8,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 5.9
+          }
+        ]
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Here's the decision on the table. Your nine-month AI pilot saved twelve percent of analyst time, but only one in four employees actually uses it. Budget review is tomorrow. Do we go A, scale it company-wide now; B, redesign it with frontline users first; or C, pause it and fix data quality and security first. Tap your call on any screen.",
+        "audio_file": "clips/dilemma_01_sage.wav",
+        "duration_secs": 25.12,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 12.56
+          }
+        ]
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Looks like most of you chose A, scale it company-wide now.",
+        "audio_file": "clips/reveal_A_01_sage.wav",
+        "duration_secs": 3.44,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.37
+          }
+        ]
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of the room went B, redesign it with frontline users first.",
+        "audio_file": "clips/reveal_B_01_sage.wav",
+        "duration_secs": 3.95,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.58
+          }
+        ]
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "Majority picked C, pause it and fix data and security first.",
+        "audio_file": "clips/reveal_C_01_sage.wav",
+        "duration_secs": 3.85,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.54
+          }
+        ]
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No votes yet, so I'll make the call for us and pick B.",
+        "audio_file": "clips/reveal_none_01_sage.wav",
+        "duration_secs": 2.97,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.49
+          }
+        ]
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Smart call. We bank the twelve percent, then hunt the next ten. I'll staff two squads to roll it out in eight weeks, with dashboards on adoption and dollars.",
+        "audio_file": "clips/branch_A_01_nova.wav",
+        "duration_secs": 9.52,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "proud1"
+            },
+            "at_secs": 2.86
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Make it nine weeks and add gating. No personal data in prompts, auto redaction on, audit logs retained, and a rollback plan. Scale is fine when exits are signposted.",
+        "audio_file": "clips/branch_A_02_aegis.wav",
+        "duration_secs": 13.42,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 5.37
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "If you scale now, over-invest in coaching and champions. Tie bonuses to usage quality, not clicks. Publish the guardrails in plain English. Speed plus clarity beats quiet resistance.",
+        "audio_file": "clips/branch_A_03_sage.wav",
+        "duration_secs": 12.54,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 7.52
+          }
+        ]
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "Alright, you want redesign. Give me two frontline squads and a week of ride-alongs. We'll kill three steps, keep the one that users love, and prove a bigger win.",
+        "audio_file": "clips/branch_B_01_nova.wav",
+        "duration_secs": 9.75,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "resigned1"
+            },
+            "at_secs": 3.9
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "While you ride along, I'll map risky touchpoints. We'll whitelist data sources, block copy-paste of sensitive fields, and test prompts against edge cases before we celebrate another pilot.",
+        "audio_file": "clips/branch_B_02_aegis.wav",
+        "duration_secs": 14.54,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 5.81
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Redesign with users turns adoption into ownership. Put a product owner from the field in charge, and measure task completion, error rates, and trust scores. Then decide scale with facts.",
+        "audio_file": "clips/branch_B_03_sage.wav",
+        "duration_secs": 12.17,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 7.3
+          }
+        ]
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "Thank you. A short pause beats a long breach. We fix duplicate vendors, missing IDs, and wide-open sharing. Thirty days to clean, catalog, and permission, or we stay paused.",
+        "audio_file": "clips/branch_C_01_aegis.wav",
+        "duration_secs": 13.61,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "yes1"
+            },
+            "at_secs": 5.44
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Deal, but make the pause work. I want a sprint plan, not a waiting room. Line up quick wins we unlock the day the data hits ninety-five percent quality.",
+        "audio_file": "clips/branch_C_02_nova.wav",
+        "duration_secs": 10.03,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 4.01
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "A pause only creates value if it's time-boxed and visible. Share the burn-down, who owns each fix, and the date to restart. Protect momentum as fiercely as you protect data.",
+        "audio_file": "clips/branch_C_03_sage.wav",
+        "duration_secs": 12.03,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 7.22
+          }
+        ]
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for diving in with us. Bring this to tonight's panel: What separated the AI initiatives that delivered real value from the ones that stalled. If you're just joining, tap a screen and try another dilemma.",
+        "audio_file": "clips/close_01_sage.wav",
+        "duration_secs": 13.05,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 6.52
+          }
+        ]
+      }
+    ]
+  }
+}

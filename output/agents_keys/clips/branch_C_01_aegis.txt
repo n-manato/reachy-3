@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Thank you. We hold until an outside red team tries prompt injection, data exfiltration, browser isolation, and voice spoofing. Give me two weeks and clear exit criteria, and I’ll sign it.

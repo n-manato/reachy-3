@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Bold call. We launch Monday, instrument everything, and hold daily stand-ups. If it stumbles, we roll back in minutes and patch. Value now, with eyes wide open.

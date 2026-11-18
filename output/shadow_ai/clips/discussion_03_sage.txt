@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=People want frictionless help, not lectures. If we punish honesty, they hide. If we shrug, we gamble with customers. What do teams need first: skills, safe tools, or leaders modeling prompts and red lines in public?

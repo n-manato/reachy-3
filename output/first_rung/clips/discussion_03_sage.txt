@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=How did you learn your craft? Bankers, clinicians, and public‑sector program managers, you did reps, got feedback, and earned judgment. If first jobs become exception handling, we must teach pattern recognition on purpose, not by accident.

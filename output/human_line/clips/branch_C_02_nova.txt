@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Then squeeze speed elsewhere. Pre-fill forms, summarize evidence, and rank cases by confidence. If your reviewers still touch every file, target decision time under two minutes for the easy half.

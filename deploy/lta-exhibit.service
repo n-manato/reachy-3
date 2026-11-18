@@ -1,0 +1,20 @@
+# systemd *user* unit: runs the exhibit resident (no menu), live on start.
+# Install with scripts/install_service.sh. Staff control: http://<this-pc>:8020/control
+[Unit]
+Description=Leading Through AI exhibit (Reachy Mini x3, web displays)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/DEV/Reachy_LTA
+ExecStart=%h/.local/bin/uv run --no-sync lta-exhibit --exhibit
+Environment=PYTHONUNBUFFERED=1
+# SIGINT → KeyboardInterrupt, so BGM / robot workers are cleaned up on stop.
+KillSignal=SIGINT
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

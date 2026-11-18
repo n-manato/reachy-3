@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=That is the energy I like. We buy licenses, switch on audit logs, and put copilots on desks by Friday. We will learn faster than any memo ever could.

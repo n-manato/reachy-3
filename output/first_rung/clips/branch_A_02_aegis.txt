@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Then fund apprenticeship on purpose. Document decisions, rotate domain reviews, and cap queue intensity. Budget for bias testing and audit logs, or your lean team becomes a fragile team when the spotlight hits.

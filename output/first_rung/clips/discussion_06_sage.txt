@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=So the lever isn’t headcount, it’s how we grow judgment. Do we compress hiring and amp the stack, or keep the class and rebuild the job? Time to let the room steer.

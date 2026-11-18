@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fair. Humans mis-hear voices and misread emails every day. We can rate-limit actions, set dollar caps, and isolate browsing. Pilot two weeks, score errors, invite an outside red team, and still ship value now.

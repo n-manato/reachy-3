@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fine, guard the crown jewels. But do not slow the floor. Pilot an enterprise chatbot next week for one hundred people. Track cycle time, error rates, and satisfaction. Expand when you see a ten percent lift.

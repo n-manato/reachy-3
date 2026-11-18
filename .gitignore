@@ -1,0 +1,19 @@
+__pycache__/
+*.py[oc]
+build/
+dist/
+*.egg-info
+.venv
+.env
+*.log
+output/**/*.mp3
+output/votes.jsonl
+output/votes_export*.csv
+.kiosk/
+
+# attendee list (personal data) — never commit
+*.docx
+# third-party background music
+music/*.mp3
+# generated speech (rebuilt from the scripts by the TTS step)
+output/**/*.wav

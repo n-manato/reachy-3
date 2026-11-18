@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for stepping in with us. Bring this to tonight’s panel: When an AI system in your company acts on its own, who can switch it off, and how fast? Next group, tap a screen and try another dilemma.

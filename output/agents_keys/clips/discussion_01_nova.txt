@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Our pilot moved refunds in under sixty seconds and cut backlog forty percent. Human agents fat-finger amounts and miss context too. Competitors already run agents in production. We keep dashboards live and fix fast when they drift.

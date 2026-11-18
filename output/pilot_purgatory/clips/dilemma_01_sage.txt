@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Here's the decision on the table. Your nine-month AI pilot saved twelve percent of analyst time, but only one in four employees actually uses it. Budget review is tomorrow. Do we go A, scale it company-wide now; B, redesign it with frontline users first; or C, pause it and fix data quality and security first. Tap your call on any screen.

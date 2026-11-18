@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Practical middle lane. I can live with guardrails if we move fast. Publish three approved tools this month, then sunset two legacy steps the training makes obsolete.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Run a privacy impact check on each tool. Enable retention controls. Create an amnesty inbox for past use, and promise learning over punishment, unless someone knowingly leaked restricted data.

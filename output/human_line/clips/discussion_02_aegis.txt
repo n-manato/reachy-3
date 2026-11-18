@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Now picture a denied disability claim triggered by a ZIP code proxy. Who signs the letter, and who answers when a regulator asks why? One percent wrong, multiplied by one hundred thousand claims, is one thousand painful stories.

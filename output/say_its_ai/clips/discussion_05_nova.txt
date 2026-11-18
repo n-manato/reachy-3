@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fair. So draw the line at sensitive calls, then move fast everywhere else. Answer honestly whenever someone asks, keep a human one keypress away, and let the bot be efficient.

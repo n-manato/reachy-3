@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Two points is nice, until a dirty lookup maps the wrong customer and emails their pricing. Yes, an AI telling you to slow down. Show me lineage, monitoring, and access controls before we ship to two thousand reps.

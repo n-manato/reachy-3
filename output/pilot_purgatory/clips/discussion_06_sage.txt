@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Both of you are right about different debts: change debt, and data debt. Our pilot saved time, but only one in four uses it. The budget review is tomorrow. The room gets to choose.

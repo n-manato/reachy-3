@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Here’s our live decision. In our company, AI now handles about sixty percent of the work your first‑year analysts do. You planned to hire ten graduates this year. What’s your call? A, hire three and invest the savings in AI; B, hire all ten and rebuild their jobs around AI; or C, hire all ten, but train them without AI first. Tap your choice on any screen.

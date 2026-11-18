@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Then set guardrails. No AI on bereavement, fraud dispute, or medical advice. Log when callers ask, track complaints, and audit scripts for empathy theater. If people feel fooled, this policy fails.

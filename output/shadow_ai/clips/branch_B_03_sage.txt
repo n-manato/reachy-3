@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Make it safe to learn. Start every staff meeting with one useful prompt and one boundary story. Track adoption, errors, and customer impact. Thank the confessors. Coach the careless. Repeat weekly for ninety days.

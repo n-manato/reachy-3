@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Thanks for weighing in. Bring this to tonight’s panel: where do your customers have a right to know they’re dealing with AI, and where does it not matter? New group, step up, tap a screen, and try another dilemma.

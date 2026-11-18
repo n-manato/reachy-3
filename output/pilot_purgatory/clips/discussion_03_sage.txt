@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=And if reps hate it, it dies anyway. When we shadowed ten teams, the top adopters helped shape prompts and screens. The laggards got a mandate and a PDF. Guess which group kept using it.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Humans aren’t perfect either. Our reviewers miskeyed three percent last quarter; the model missed one percent. That gap is money and fairness. Route the hairy twenty percent to experts, and let AI speed the boring eighty.

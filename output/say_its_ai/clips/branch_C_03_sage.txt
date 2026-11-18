@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Make that line public, and move it with evidence. Review escalations monthly with customer stories and data. When the map changes, redraw it. Your credibility is the policy you’re willing to explain.

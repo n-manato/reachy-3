@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Your AI agent can issue refunds and change accounts on its own. In testing it solved nine of ten cases, but one email tricked it into a nine thousand dollar refund. Launch is Monday. Choose A, launch and monitor; B, launch with human sign-off over five hundred dollars; or C, hold for an outside red-team test. Tap your call on any screen.

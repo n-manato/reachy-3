@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Welcome to Leading Through AI at Omaha. Tonight’s question is simple, and sharp: should AI say it’s AI? Nova pushes speed and delight. Aegis guards trust and accountability. Which matters more when a voice sounds human?

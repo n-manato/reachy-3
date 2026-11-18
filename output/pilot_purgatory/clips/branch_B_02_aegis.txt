@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=While you ride along, I'll map risky touchpoints. We'll whitelist data sources, block copy-paste of sensitive fields, and test prompts against edge cases before we celebrate another pilot.

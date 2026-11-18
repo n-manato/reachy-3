@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fair, so redesign the first rung. Unbundle tasks, build gold‑standard examples, and rotate shadowing. Target metrics: cut handle time forty percent, double coaching hours, and lift customer satisfaction five points. Small teams, weekly reviews, promotions on outcomes, not keystrokes.

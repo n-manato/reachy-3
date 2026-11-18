@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fine, but make the pause count. Pick two critical workflows, build sandboxed assistants, and set a firm go date. If cycle times slip, loosen the gate early.

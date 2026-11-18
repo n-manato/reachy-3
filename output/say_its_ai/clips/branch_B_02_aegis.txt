@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Measure opt‑outs, and define who gets people by default. Seniors, new accounts, fraud flags, and healthcare concerns route to humans. Document consent, capture declines, and build transcripts that survive an audit and a headline.

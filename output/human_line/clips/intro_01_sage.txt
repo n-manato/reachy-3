@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Welcome, friends of Nebraska business. Tonight we tackle the Human Line: which decisions should AI never make. With Nova pushing value and Aegis guarding trust, we’ll test where speed helps, and where only judgment belongs.

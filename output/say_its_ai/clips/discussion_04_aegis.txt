@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=There’s also the line between friendly and manipulative. A cloned voice that sounds caring while it sells warranty add‑ons is risky. Healthcare symptoms, debt collections, bereavement calls, and layoffs need humans, not optimism wrapped in a pleasant waveform.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Train approvers, separate duties, and add spoofing checks. Tie each approval to a person, not a shared inbox. Miss the SLA, and the agent pauses, not proceeds.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=I’ll back it with a clock. Ninety days max without AI, then staged ramp‑in by use case. Otherwise you burn runway and lose compounding gains to competitors who learned while you paused.

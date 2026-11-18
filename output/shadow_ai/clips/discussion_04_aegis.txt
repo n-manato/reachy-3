@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Start with boundaries and identity. Ban pasting personal data, contracts, and source code. Route logins through single sign on. Use data loss prevention. Then train on red teaming prompts, because polite models still hallucinate facts.

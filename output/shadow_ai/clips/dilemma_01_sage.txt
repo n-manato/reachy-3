@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=You discover that sixty percent of your staff paste company data into public AI chatbots to get work done. What is your call? A, embrace it with enterprise AI licenses for everyone tomorrow; B, approved tools, training and guardrails, with amnesty for past use; or C, block public AI tools until a policy is in place. Tap your call on any screen.

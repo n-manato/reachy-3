@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Thank you. A short pause beats a long breach. We fix duplicate vendors, missing IDs, and wide-open sharing. Thirty days to clean, catalog, and permission, or we stay paused.

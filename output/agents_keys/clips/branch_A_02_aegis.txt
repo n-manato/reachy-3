@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Then I want a hard per-transaction cap, immutable logs, a visible kill switch, and paging on anomalies. No night shift guessing who’s allowed to stop it.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Picture a deepfake of your CEO approving a wire transfer. Two minutes of cloned voice over a bad connection. The agent hears authority, not spoof. Who answers by name when that hits the audit trail?

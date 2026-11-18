@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=And design guardrails. If the model misroutes three percent of high‑risk cases, averages look fine, fraud and triage do not. Set escalation thresholds, supervision ratios, and who signs off when the machine sounds confident but wrong.

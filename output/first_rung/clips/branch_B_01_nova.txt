@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=You kept the class and changed the job. I love the capacity. Set targets like twice the throughput per person and a quarter the rework, or it’s just payroll with fancier tools.

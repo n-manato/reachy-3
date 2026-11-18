@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=This choice puts culture to work. Treat AI as the new spreadsheet: universal, taught early, governed tightly, and audited. Your grads master tools and judgment together, with mentors who model when to slow down.

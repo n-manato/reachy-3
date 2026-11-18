@@ -1,0 +1,366 @@
+{
+  "topic_id": "human_line",
+  "title": "The Human Line",
+  "question": "Which decisions should AI never make?",
+  "rendered_at": "2026-11-08T06:36:03+00:00",
+  "tts_model": "eleven_multilingual_v2",
+  "voices": {
+    "nova": "JBFqnCBsd6RMkjVDRZzb",
+    "sage": "XrExE9yKIg1WjnnlVkGX",
+    "aegis": "pqHfZKP75CvOlQylNhV4"
+  },
+  "segments": {
+    "intro": [
+      {
+        "role": "sage",
+        "text": "Welcome, friends of Nebraska business. Tonight we tackle the Human Line: which decisions should AI never make. With Nova pushing value and Aegis guarding trust, we’ll test where speed helps, and where only judgment belongs.",
+        "audio_file": "clips/intro_01_sage.wav",
+        "duration_secs": 14.49,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 2.9
+          }
+        ]
+      }
+    ],
+    "discussion": [
+      {
+        "role": "nova",
+        "text": "Speed wins. We launched a pilot that auto-resolved eighty percent of tier-one tickets in six weeks, cut waits from eight minutes to under one, and saved two point four million. Delay that, and a rival steals your customers.",
+        "audio_file": "clips/discussion_01_nova.wav",
+        "duration_secs": 13.65,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 4.1
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Now picture a denied disability claim triggered by a ZIP code proxy. Who signs the letter, and who answers when a regulator asks why? One percent wrong, multiplied by one hundred thousand claims, is one thousand painful stories.",
+        "audio_file": "clips/discussion_02_aegis.wav",
+        "duration_secs": 17.51,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 7.0
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "People accept mistakes they understand. Opaque math doesn’t feel fair. After two confusing answers, one in three customers hangs up angry. That’s not just CX, that’s morale in your call center and trust in your brand.",
+        "audio_file": "clips/discussion_03_sage.wav",
+        "duration_secs": 14.72,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 7.36
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Explainable models are often two points less accurate. Regulators won’t accept a score alone; they expect clear, specific reasons. If we choose opacity, we need counter-measures: challenge sets, appeals, and an owner who can testify.",
+        "audio_file": "clips/discussion_04_aegis.wav",
+        "duration_secs": 17.83,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 10.7
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Humans aren’t perfect either. Our reviewers miskeyed three percent last quarter; the model missed one percent. That gap is money and fairness. Route the hairy twenty percent to experts, and let AI speed the boring eighty.",
+        "audio_file": "clips/discussion_05_nova.wav",
+        "duration_secs": 14.49,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "proud1"
+            },
+            "at_secs": 5.8
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "So where’s the human line tonight: full autonomy, autonomy with oversight, or human decision with AI assist? Before you vote, hold two questions in mind: who explains a bad call, and what will your customers forgive?",
+        "audio_file": "clips/discussion_06_sage.wav",
+        "duration_secs": 15.23,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 7.62
+          }
+        ]
+      }
+    ],
+    "dilemma": [
+      {
+        "role": "sage",
+        "text": "Here’s your real-world scenario. Your AI can approve or deny eighty percent of customer claims instantly, saving four million dollars a year. Errors are rare, but hard to explain on a call. What’s your call? A, let AI decide automatically; B, AI decides, but a human reviews every denial; or C, AI only recommends, people make every decision. Tap your choice on any screen.",
+        "audio_file": "clips/dilemma_01_sage.wav",
+        "duration_secs": 28.51,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "inquiring1"
+            },
+            "at_secs": 5.7
+          }
+        ]
+      }
+    ],
+    "reveal_A": [
+      {
+        "role": "sage",
+        "text": "Most of you chose A, full auto approvals and denials for speed.",
+        "audio_file": "clips/reveal_A_01_sage.wav",
+        "duration_secs": 4.04,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "cheerful1"
+            },
+            "at_secs": 1.21
+          }
+        ]
+      }
+    ],
+    "reveal_B": [
+      {
+        "role": "sage",
+        "text": "Most of the room picked B, AI decides, humans review every denial.",
+        "audio_file": "clips/reveal_B_01_sage.wav",
+        "duration_secs": 4.88,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 1.95
+          }
+        ]
+      }
+    ],
+    "reveal_C": [
+      {
+        "role": "sage",
+        "text": "The majority went with C, AI recommends and people make every call.",
+        "audio_file": "clips/reveal_C_01_sage.wav",
+        "duration_secs": 4.09,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 1.63
+          }
+        ]
+      }
+    ],
+    "reveal_none": [
+      {
+        "role": "sage",
+        "text": "No brave fingers yet, so I’ll make the room’s call and pick B.",
+        "audio_file": "clips/reveal_none_01_sage.wav",
+        "duration_secs": 3.39,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "laughing1"
+            },
+            "at_secs": 1.36
+          }
+        ]
+      }
+    ],
+    "branch_A": [
+      {
+        "role": "nova",
+        "text": "Yes. Instant decisions delight customers and free capacity. We bank roughly four million, hit same-day SLAs, and redeploy reviewers to complex cases. Let’s monitor drift weekly and keep an appeal path for edge cases.",
+        "audio_file": "clips/branch_A_01_nova.wav",
+        "duration_secs": 14.77,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 4.43
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Then I want two safeguards: auto-approval thresholds tied to risk, and a human-led appeals desk with forty-eight-hour turnaround. Plus, quarterly fairness audits across age, income, and ZIP, published to your board.",
+        "audio_file": "clips/branch_A_02_aegis.wav",
+        "duration_secs": 17.09,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 8.54
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "Full auto means you own the denials. Publish clear reasons, script empathetic explanations, and measure appeal outcomes. Name one accountable executive, not a committee, to stand in front of customers and regulators.",
+        "audio_file": "clips/branch_A_03_sage.wav",
+        "duration_secs": 13.84,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 8.3
+          }
+        ]
+      }
+    ],
+    "branch_B": [
+      {
+        "role": "nova",
+        "text": "I can live with that. We still auto-approve clean cases and bank most savings. Review every denial within twenty-four hours, or speed dies and the four million drips away in callbacks.",
+        "audio_file": "clips/branch_B_01_nova.wav",
+        "duration_secs": 10.91,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "helpful1"
+            },
+            "at_secs": 4.37
+          }
+        ]
+      },
+      {
+        "role": "aegis",
+        "text": "Good. Make denial reviewers independent from sales targets, and rotate them. Randomly sample approvals too, or fraud learns the pattern. Log every reversal and feed it back into training with documented reasons.",
+        "audio_file": "clips/branch_B_02_aegis.wav",
+        "duration_secs": 17.0,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 8.5
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "This is a trust dividend model. Tell customers a human double-checks denials, and prove it with response times. Staff for peaks, not averages, or your promise breaks the week after launch.",
+        "audio_file": "clips/branch_B_03_sage.wav",
+        "duration_secs": 12.68,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 7.61
+          }
+        ]
+      }
+    ],
+    "branch_C": [
+      {
+        "role": "aegis",
+        "text": "You drew the human line at outcomes. AI assists, people decide. It’s safest for headlines, but costs more. Budget for added headcount, and track decision variance so fairness doesn’t drift shift to shift.",
+        "audio_file": "clips/branch_C_01_aegis.wav",
+        "duration_secs": 17.65,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "thoughtful1"
+            },
+            "at_secs": 8.82
+          }
+        ]
+      },
+      {
+        "role": "nova",
+        "text": "Then squeeze speed elsewhere. Pre-fill forms, summarize evidence, and rank cases by confidence. If your reviewers still touch every file, target decision time under two minutes for the easy half.",
+        "audio_file": "clips/branch_C_02_nova.wav",
+        "duration_secs": 12.26,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "enthusiastic1"
+            },
+            "at_secs": 6.13
+          }
+        ]
+      },
+      {
+        "role": "sage",
+        "text": "When humans hold the pen, make their judgment visible. Train to consistent standards, and commit to auditable notes. Customers feel heard, and you can explain any call without pointing at a mystery score.",
+        "audio_file": "clips/branch_C_03_sage.wav",
+        "duration_secs": 12.54,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "understanding1"
+            },
+            "at_secs": 7.52
+          }
+        ]
+      }
+    ],
+    "close": [
+      {
+        "role": "sage",
+        "text": "Thanks for weighing the Human Line with us. Bring this to tonight’s panel: Which decisions in your organization have you deliberately kept in human hands, and why? If you’ve just arrived, tap a screen and try another dilemma.",
+        "audio_file": "clips/close_01_sage.wav",
+        "duration_secs": 13.42,
+        "tool_calls": [
+          {
+            "name": "play_emotion",
+            "arguments": {
+              "emotion": "welcoming1"
+            },
+            "at_secs": 2.68
+          }
+        ]
+      }
+    ]
+  }
+}

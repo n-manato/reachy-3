@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Lean can work if you widen the learning surface. Pair every sprint with coaching, rotate them across products, and reward asking for a second opinion. The first rung must still teach judgment.

@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=XrExE9yKIg1WjnnlVkGX
+text=Leaders, make curiosity part of consent. Coach agents to answer plainly, publish the policy, and watch surprise complaints like a hawk. If trust holds while speed rises, you’ve earned this choice.

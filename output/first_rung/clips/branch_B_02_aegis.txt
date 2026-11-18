@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=pqHfZKP75CvOlQylNhV4
+text=Make it safe to learn. Sandbox environments, red‑team days, and clear escalation ladders. Track near‑misses as proudly as wins, or you’ll only discover gaps when regulators or customers do.

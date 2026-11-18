@@ -1,0 +1,3 @@
+model=eleven_multilingual_v2
+voice=JBFqnCBsd6RMkjVDRZzb
+text=Fine, wire the rails, but don't pave the parking lot. Redesign the claims process with AI at the core. Take cycle time from ten days to six, then lock the controls.
