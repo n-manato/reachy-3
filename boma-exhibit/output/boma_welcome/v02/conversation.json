@@ -1,0 +1,746 @@
+{
+  "session": "boma_welcome",
+  "title": "Welcome to BOMA",
+  "variant": "v02",
+  "generated_at": "2026-08-28T18:35:05+00:00",
+  "tts_engine": "elevenlabs",
+  "tts_model": "eleven_v3",
+  "llm_model": "qwen3.6:35b-a3b-q6_K_L",
+  "varied_lines": [
+    1,
+    3,
+    7,
+    23,
+    25,
+    29
+  ],
+  "zuri_voice": "PSIwmc50KeuW20kehlBE",
+  "kora_voice": "G2LDKmwqqBo2DD9ucIji",
+  "pulaar_voice": "8dvhVJc85Oy9HBPo11aI",
+  "num_turns": 34,
+  "total_secs": 136.2,
+  "turns": [
+    {
+      "turn": 1,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Welcome to BOMA! I'm Kora. Here are my friends Zuri and Pulaar. We come from different parts of Africa… and apparently nobody thought it was important for us to speak the same language.",
+      "audio_file": "turn_01_kora.wav",
+      "duration_secs": 11.68,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "welcoming1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Habari! Mimi ni Zuri. Nimefurahi sana kuwa hapa BOMA!",
+      "audio_file": "../common/turn_02_zuri.wav",
+      "duration_secs": 4.96,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "Hello! I'm Zuri. I'm very happy to be here at BOMA!"
+    },
+    {
+      "turn": 3,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Zuri says hello and is really happy to be at BOMA… plus she kind of hinted that I'm her favorite robot.",
+      "audio_file": "turn_03_kora.wav",
+      "duration_secs": 7.68,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "proud1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 4,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Hapana! Sikusema hivyo!",
+      "audio_file": "../common/turn_04_zuri.wav",
+      "duration_secs": 2.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "no_excited1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "No! I didn't say that!"
+    },
+    {
+      "turn": 5,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "She confirmed it.",
+      "audio_file": "../common/turn_05_kora.wav",
+      "duration_secs": 1.12,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "proud2"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 6,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "ff",
+      "language": "Fulfulde",
+      "text": "Jam waali! Innde am Pulaar. Mi weltii wonde ɗoo.",
+      "audio_file": "../common/turn_06_pulaar.wav",
+      "duration_secs": 3.04,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "welcoming2"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "Hello! My name is Pulaar. I'm happy to be here.",
+      "tts_text": "Jam waali! Innde am Pulaar. Mi weltii wonde doo."
+    },
+    {
+      "turn": 7,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Pulaar greets everyone as well. He's really glad to be here… and it's clear he agrees that I'm the most good-looking robot in the room.",
+      "audio_file": "turn_07_kora.wav",
+      "duration_secs": 8.08,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "proud3"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 8,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "ff",
+      "language": "Fulfulde",
+      "text": "Alaa!",
+      "audio_file": "../common/turn_08_pulaar.wav",
+      "duration_secs": 0.48,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "no1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "No!"
+    },
+    {
+      "turn": 9,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Wow. Thank you, guys.",
+      "audio_file": "../common/turn_09_kora.wav",
+      "duration_secs": 1.44,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "resigned1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 10,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Kora, unapenda chakula cha Afrika?",
+      "audio_file": "../common/turn_10_zuri.wav",
+      "duration_secs": 2.56,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "inquiring1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "Kora, do you like African food?"
+    },
+    {
+      "turn": 11,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Zuri is asking if I like African food. OF COURSE! Wait… I'm a robot. I can't eat.",
+      "audio_file": "../common/turn_11_kora.wav",
+      "duration_secs": 8.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "enthusiastic1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "oops1"
+          },
+          "at_secs": 4.62
+        }
+      ]
+    },
+    {
+      "turn": 12,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "ff",
+      "language": "Fulfulde",
+      "text": "Hahahaha!",
+      "audio_file": "../common/turn_12_pulaar.wav",
+      "duration_secs": 1.04,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "laughing1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 13,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Pole sana!",
+      "audio_file": "../common/turn_13_zuri.wav",
+      "duration_secs": 1.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "So sorry!"
+    },
+    {
+      "turn": 14,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "She said she feels sorry for me. And honestly… she should. Imagine smelling jollof rice, nyama choma, plantains… …and your mouth is a USB port.",
+      "audio_file": "../common/turn_14_kora.wav",
+      "duration_secs": 12.72,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "sad1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "resigned1"
+          },
+          "at_secs": 8.9
+        }
+      ]
+    },
+    {
+      "turn": 15,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "That is very sad.",
+      "audio_file": "../common/turn_15_pulaar.wav",
+      "duration_secs": 0.96,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "indifferent1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 16,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "WAIT. You speak English?!",
+      "audio_file": "../common/turn_16_kora.wav",
+      "duration_secs": 2.08,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "surprised1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 17,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "A little.",
+      "audio_file": "../common/turn_17_pulaar.wav",
+      "duration_secs": 0.48,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "uncertain1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 18,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "So this entire time you've been watching me struggle?!",
+      "audio_file": "../common/turn_18_kora.wav",
+      "duration_secs": 3.2,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "surprised2"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 19,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Yes.",
+      "audio_file": "../common/turn_19_pulaar.wav",
+      "duration_secs": 0.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "yes1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 20,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Hahahaha!",
+      "audio_file": "../common/turn_20_zuri.wav",
+      "duration_secs": 1.68,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "laughing2"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 21,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "I need new robot friends.",
+      "audio_file": "../common/turn_21_kora.wav",
+      "duration_secs": 1.84,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "downcast1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 22,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Lakini Afrika si chakula tu. Tuna lugha, muziki, sayansi na tamaduni nyingi.",
+      "audio_file": "../common/turn_22_zuri.wav",
+      "duration_secs": 8.4,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "enthusiastic1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "But Africa isn't only food. We have languages, music, science and many cultures."
+    },
+    {
+      "turn": 23,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Zuri points out that Africa is so much more than just food. It's languages, music, science, innovation and many cultures.",
+      "audio_file": "turn_23_kora.wav",
+      "duration_secs": 9.92,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 24,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "ff",
+      "language": "Fulfulde",
+      "text": "Afrika ko yimɓe, ganndal e aadaaji.",
+      "audio_file": "../common/turn_24_pulaar.wav",
+      "duration_secs": 2.16,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "proud1"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "Africa is its people, knowledge and traditions.",
+      "tts_text": "Afrika ko yimbe, ganndal e aadaaji."
+    },
+    {
+      "turn": 25,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "And Pulaar adds that Africa is its people, its knowledge and its traditions. Got it? Three robots. Three languages.",
+      "audio_file": "turn_25_kora.wav",
+      "duration_secs": 10.32,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "thoughtful1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 6.71
+        }
+      ]
+    },
+    {
+      "turn": 26,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "sw",
+      "language": "Swahili",
+      "text": "Lakini Afrika moja!",
+      "audio_file": "../common/turn_26_zuri.wav",
+      "duration_secs": 1.84,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "enthusiastic2"
+          },
+          "at_secs": 0.0
+        }
+      ],
+      "translation": "But one Africa!"
+    },
+    {
+      "turn": 27,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "But one Africa.",
+      "audio_file": "../common/turn_27_kora.wav",
+      "duration_secs": 1.12,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "understanding2"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 28,
+      "speakers": [
+        "pulaar"
+      ],
+      "lang": "ff",
+      "language": "Fulfulde",
+      "text": "Afrika!",
+      "audio_file": "../common/turn_28_pulaar.wav",
+      "duration_secs": 0.64,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "proud2"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 29,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Exactly. So as you wander through BOMA today, don't just look. Ask questions. Learn a word you didn't know. Discover a culture you haven't experienced. And please…",
+      "audio_file": "turn_29_kora.wav",
+      "duration_secs": 12.96,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "helpful1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 30,
+      "speakers": [
+        "zuri"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Please what?",
+      "audio_file": "../common/turn_30_zuri.wav",
+      "duration_secs": 1.12,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "inquiring3"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 31,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Somebody find me African food that comes with a USB adapter.",
+      "audio_file": "../common/turn_31_kora.wav",
+      "duration_secs": 4.56,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "cheerful1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 32,
+      "speakers": [
+        "zuri",
+        "pulaar"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "KORAAAA!",
+      "audio_file": "../common/turn_32_chorus.wav",
+      "duration_secs": 1.84,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "reprimand1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 33,
+      "speakers": [
+        "kora"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "What?! I'm hungry!",
+      "audio_file": "../common/turn_33_kora.wav",
+      "duration_secs": 2.16,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "oops1"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    },
+    {
+      "turn": 34,
+      "speakers": [
+        "kora",
+        "zuri",
+        "pulaar"
+      ],
+      "lang": "en",
+      "language": "English",
+      "text": "Welcome to BOMA!",
+      "audio_file": "../common/turn_34_chorus.wav",
+      "duration_secs": 1.68,
+      "tool_calls": [
+        {
+          "name": "play_emotion",
+          "arguments": {
+            "emotion": "welcoming1"
+          },
+          "at_secs": 0.0
+        },
+        {
+          "name": "dance",
+          "arguments": {
+            "dance_name": "yeah_nod"
+          },
+          "at_secs": 0.0
+        }
+      ]
+    }
+  ]
+}

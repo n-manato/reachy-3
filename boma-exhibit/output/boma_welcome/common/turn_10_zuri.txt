@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=PSIwmc50KeuW20kehlBE
+text=Kora, unapenda chakula cha Afrika?

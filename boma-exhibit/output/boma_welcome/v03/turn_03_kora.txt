@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=Zuri greets the room and says how much she loves being at BOMA… and I'm pretty sure she called me her favorite robot.

@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=Pulaar says hello right back. He's happy to be here too… and naturally he thinks I'm the best-looking robot around.

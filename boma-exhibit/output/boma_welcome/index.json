@@ -1,0 +1,14 @@
+{
+  "session": "boma_welcome",
+  "title": "Welcome to BOMA",
+  "variants": [
+    "v01",
+    "v02",
+    "v03",
+    "v04",
+    "v05"
+  ],
+  "generated_at": "2026-08-28T18:35:05+00:00",
+  "tts_model": "eleven_v3",
+  "llm_model": "qwen3.6:35b-a3b-q6_K_L"
+}

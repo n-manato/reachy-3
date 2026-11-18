@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=She said she feels sorry for me. And honestly… she should. Imagine smelling jollof rice, nyama choma, plantains… …and your mouth is a USB port.

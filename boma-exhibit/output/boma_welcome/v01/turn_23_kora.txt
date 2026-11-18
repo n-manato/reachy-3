@@ -1,0 +1,3 @@
+model=eleven_v3
+voice=G2LDKmwqqBo2DD9ucIji
+text=Zuri says Africa is much more than food. It's languages, music, science, innovation and many cultures.

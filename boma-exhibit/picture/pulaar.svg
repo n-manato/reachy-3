@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"
+     width="400" height="400" role="img" aria-label="PULAAR, a robot">
+  <title>PULAAR, a robot</title>
+  <defs>
+    <pattern id="pulaar-cloth" width="64" height="64" patternUnits="userSpaceOnUse">
+      <rect width="64" height="64" fill="#0f4b41"/>
+      <path d="M32 6 L58 32 L32 58 L6 32 Z" fill="none" stroke="#1f7a6b"
+            stroke-width="3" opacity="0.38"/>
+      <path d="M32 20 L44 32 L32 44 L20 32 Z" fill="#1f7a6b" opacity="0.22"/>
+      <rect x="0" y="30" width="10" height="4" fill="#1f7a6b" opacity="0.32"/>
+      <rect x="54" y="30" width="10" height="4" fill="#1f7a6b" opacity="0.32"/>
+    </pattern>
+    <linearGradient id="pulaar-shell" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d3ece6"/>
+    </linearGradient>
+    <radialGradient id="pulaar-vignette" cx="50%" cy="40%" r="65%">
+      <stop offset="55%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Textile ground -->
+  <rect width="400" height="400" fill="url(#pulaar-cloth)"/>
+  <rect width="400" height="400" fill="url(#pulaar-vignette)"/>
+
+  <!-- Antennas. Drawn before the head so their bases tuck behind it, and
+       stroked twice (dark under light) so they read against any pattern. -->
+  <g fill="none" stroke-linecap="round">
+    <g stroke="#0f4b41" stroke-width="17">
+      <path d="M152 150 L122.8 77.7"/>
+      <path d="M248 150 L277.2 77.7"/>
+    </g>
+    <g stroke="#d3ece6" stroke-width="8">
+      <path d="M152 150 L122.8 77.7"/>
+      <path d="M248 150 L277.2 77.7"/>
+    </g>
+  </g>
+  <circle cx="122.8" cy="77.7" r="17" fill="#1f7a6b" stroke="#0f4b41" stroke-width="6"/>
+  <circle cx="277.2" cy="77.7" r="17" fill="#1f7a6b" stroke="#0f4b41" stroke-width="6"/>
+
+  <!-- Shoulders -->
+  <path d="M70 400 v-36 a56 56 0 0 1 56 -56 h148 a56 56 0 0 1 56 56 v36 z"
+        fill="#1f7a6b" stroke="#0f4b41" stroke-width="7"/>
+
+  <!-- Head -->
+  <rect x="98" y="118" width="204" height="196" rx="76"
+        fill="url(#pulaar-shell)" stroke="#0f4b41" stroke-width="8"/>
+
+  <!-- Visor -->
+  <rect x="132" y="186" width="136" height="66" rx="33" fill="#241a13"/>
+  <rect x="132" y="186" width="136" height="28" rx="14" fill="#ffffff" opacity="0.09"/>
+  <rect x="155" y="214" width="36" height="10" rx="5" fill="#1f7a6b"/><rect x="209" y="214" width="36" height="10" rx="5" fill="#1f7a6b"/>
+
+  <!-- Speaker grille -->
+  <g fill="#0f4b41" opacity="0.5">
+    <rect x="170" y="272" width="60" height="8" rx="4"/>
+    <rect x="180" y="288" width="40" height="8" rx="4"/>
+  </g>
+</svg>

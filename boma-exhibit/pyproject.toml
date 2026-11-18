@@ -1,0 +1,56 @@
+[project]
+name = "boma-exhibit"
+version = "0.1.0"
+description = "BOMA welcome exhibit: three Reachy Mini robots perform a multilingual sketch (English / Swahili / Fulfulde)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "reachy-mini==1.9.0",
+    "reachy-mini-dances-library",
+    # httpx talks to both ElevenLabs (TTS) and the Nexus/Ollama LLM endpoint.
+    # No `openai` SDK: the LLM endpoint is plain OpenAI-compatible HTTP.
+    "httpx>=0.27",
+    "numpy",
+    "scipy",
+    "python-dotenv",
+    # pycairo / pygobject are only needed on Linux. On Windows & macOS,
+    # reachy-mini pulls a self-contained `gstreamer-bundle` wheel instead.
+    "pycairo ; sys_platform == 'linux'",
+    "pygobject ; sys_platform == 'linux'",
+    # Browser-based exhibit UI. This project has no Qt/VLC backend at all --
+    # the single TV runs the /top page and emits every sound the show makes.
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+    # MP3 encoder (pure wheel, no system ffmpeg). The web display serves
+    # compressed speech to the TV browser instead of multi-MB WAVs, which is
+    # what keeps the robot control link from starving on the shared Wi-Fi.
+    "lameenc>=1.8",
+    # Only used by the "computer" / "hybrid" audio modes. The exhibit PC is
+    # headless with no sound card, so the real show never touches this.
+    "sounddevice>=0.5.5",
+]
+
+[project.scripts]
+boma-exhibit = "boma_exhibit.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/boma_exhibit"]
+
+[tool.uv]
+# The lock resolves for both hosts this exhibit runs on: the Linux show PC and
+# the Windows deployment at C:\DEV\Africa. Keep both -- dropping win32 makes
+# `uv sync` on Windows fail to find a resolution for pycairo/pygobject.
+environments = ["sys_platform == 'linux'", "sys_platform == 'win32'"]
+
+# reachy-mini bundles gstreamer-msvc-runtime for Windows but it has no
+# wheels for macOS/Linux. Scope it to Windows only.
+override-dependencies = [
+    "gstreamer-bundle ; sys_platform == 'win32'",
+    "gstreamer-libs ; sys_platform == 'win32'",
+    "gstreamer-msvc-runtime ; sys_platform == 'win32'",
+]
