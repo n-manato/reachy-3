@@ -25,8 +25,8 @@ One repository, one folder per exhibit. Each folder is run in place: it holds
 its own virtual environment and `.env`, and the systemd units under each
 `deploy/` directory point at it.
 
-`ethics-podcast/` is also published, with identical history, to the lab's
-exhibit repository; `./push-ethics-podcast-to-org.sh` sends new commits there.
+`ethics-podcast/` started in the lab's exhibit repository
+(`ai-ccore-exhibit/Reachy`); this copy has since diverged from it.
 
 Secrets (`.env`), licensed background music and generated speech audio are not
 part of this repository; each project's README explains how to supply them.
